@@ -2,16 +2,16 @@
 // app.js — ponto de entrada da aplicação
 // ═══════════════════════════════════════════
 
-import { openDB } from './db.js?v=1775834769';
-import { S } from './state.js?v=1775834769';
-import { goHome, openSeason, showSec, setBreadcrumb } from './nav.js?v=1775834769';
-import { renderSeasons, createSeason, quickToggleEnded, toggleSeasonEnded, deleteSeason, getSeasonById } from './seasons.js?v=1775834769';
-import { fillInfoForm, setInfoMode, saveInfo, renderPavilions, addPavilion, removePavilion } from './info.js?v=1775834769';
-import { uploadOwnBadge, removeOwnBadge } from './badge.js?v=1775834769';
-import { renderPlayers, openPlayerProfile, openEditCurrentPlayer, deleteCurrentPlayer, openAddPlayer, openEditPlayer, savePlayer, deletePlayer } from './players.js?v=1775834769';
-import { renderOpponents, openAddOpponent, openEditOpponent, saveOpponent, openOpponentProfile, saveOpponentAnalysis, openEditCurrentOpponent, deleteCurrentOpponent, openAddOppPlayer, openEditOppPlayer, saveOppPlayer, openOppPlayerProfile, saveOppPlayerNotes, deleteCurrentOppPlayer } from './opponents.js?v=1775834769';
-import { renderMatches, openAddMatch, openEditMatch, saveMatch, deleteMatch, openMatchEvents } from './matches.js?v=1775834769';
-import { closeModal } from './utils.js?v=1775834769';
+import { openDB } from './db.js';
+import { S } from './state.js';
+import { goHome, openSeason, showSec, setBreadcrumb } from './nav.js';
+import { renderSeasons, createSeason, quickToggleEnded, toggleSeasonEnded, deleteSeason, getSeasonById } from './seasons.js';
+import { fillInfoForm, setInfoMode, saveInfo, renderPavilions, addPavilion, removePavilion, addLeague, removeLeague, addCup, removeCup } from './info.js';
+import { uploadOwnBadge, removeOwnBadge } from './badge.js';
+import { renderPlayers, openPlayerProfile, openEditCurrentPlayer, deleteCurrentPlayer, openAddPlayer, openEditPlayer, savePlayer, deletePlayer } from './players.js';
+import { renderOpponents, openAddOpponent, openEditOpponent, saveOpponent, openOpponentProfile, saveOpponentAnalysis, openEditCurrentOpponent, deleteCurrentOpponent, openAddOppPlayer, openEditOppPlayer, saveOppPlayer, openOppPlayerProfile, saveOppPlayerNotes, deleteCurrentOppPlayer } from './opponents.js';
+import { renderMatches, openAddMatch, openEditMatch, saveMatch, deleteMatch, openMatchEvents } from './matches.js';
+import { closeModal } from './utils.js';
 
 // ── openSeasonById — lookup seguro sem JSON no onclick ──
 function openSeasonById(id) {
@@ -29,7 +29,7 @@ export const app = {
   // seasons
   createSeason, quickToggleEnded, toggleSeasonEnded, deleteSeason,
   // info
-  setInfoMode, saveInfo, addPavilion, removePavilion,
+  setInfoMode, saveInfo, addPavilion, removePavilion, addLeague, removeLeague, addCup, removeCup,
   // badge
   uploadOwnBadge, removeOwnBadge,
   // players

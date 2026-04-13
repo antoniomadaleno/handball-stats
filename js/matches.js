@@ -2,9 +2,9 @@
 // matches.js — gestão de jogos
 // ═══════════════════════════════════════════
 
-import { S } from './state.js?v=1775834769';
-import { DB } from './db.js?v=1775834769';
-import { esc, toast, closeModal, fmtDatetime, emptyState } from './utils.js?v=1775834769';
+import { S } from './state.js';
+import { DB } from './db.js';
+import { esc, toast, closeModal, fmtDatetime, emptyState } from './utils.js';
 
 export function renderMatches() {
   Promise.all([DB.matches.bySeason(S.season.id), DB.opponents.bySeason(S.season.id)]).then(([matches, opps]) => {

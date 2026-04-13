@@ -2,9 +2,9 @@
 // players.js — plantel próprio
 // ═══════════════════════════════════════════
 
-import { S } from './state.js?v=1775834769';
-import { DB } from './db.js?v=1775834769';
-import { esc, toast, closeModal, calcAge, emptyState, POS, POS_ORDER } from './utils.js?v=1775834769';
+import { S } from './state.js';
+import { DB } from './db.js';
+import { esc, toast, closeModal, calcAge, emptyState, POS, POS_ORDER } from './utils.js';
 
 export function renderPlayers() {
   DB.players.bySeason(S.season.id).then(players => {
@@ -42,7 +42,7 @@ export function openPlayerProfile(id) {
     document.getElementById('pp-name').textContent = p.name;
     document.getElementById('pp-sub').textContent  = POS[p.position] || p.position;
     document.getElementById('pp-shirt').textContent   = p.shirt || '—';
-    document.getElementById('pp-pos').innerHTML       = `<span class="pos pos-${p.position}">${p.position}</span>`;
+    document.getElementById('pp-pos').textContent     = p.position;
     document.getElementById('pp-age').textContent     = p.dob ? calcAge(p.dob) + ' anos' : '—';
     const m = [p.height ? p.height + 'cm' : null, p.weight ? p.weight + 'kg' : null].filter(Boolean).join(' / ');
     document.getElementById('pp-metrics').textContent = m || '—';

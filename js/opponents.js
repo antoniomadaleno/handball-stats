@@ -2,10 +2,10 @@
 // opponents.js — adversários, análise e plantel
 // ═══════════════════════════════════════════
 
-import { S } from './state.js?v=1775834769';
-import { DB } from './db.js?v=1775834769';
-import { esc, toast, closeModal, calcAge, emptyState, POS, POS_ORDER } from './utils.js?v=1775834769';
-import { getInitials } from './badge.js?v=1775834769';
+import { S } from './state.js';
+import { DB } from './db.js';
+import { esc, toast, closeModal, calcAge, emptyState, POS, POS_ORDER } from './utils.js';
+import { getInitials } from './badge.js';
 
 // ── Lista de adversários ───────────────────
 

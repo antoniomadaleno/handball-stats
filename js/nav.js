@@ -2,9 +2,9 @@
 // nav.js — navegação, páginas, sidebar
 // ═══════════════════════════════════════════
 
-import { S } from './state.js?v=1775834769';
-import { esc } from './utils.js?v=1775834769';
-import { renderBadge } from './badge.js?v=1775834769';
+import { S } from './state.js';
+import { esc } from './utils.js';
+import { renderBadge } from './badge.js';
 
 export function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));

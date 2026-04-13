@@ -2,9 +2,9 @@
 // badge.js — emblemas e iniciais
 // ═══════════════════════════════════════════
 
-import { S } from './state.js?v=1775834769';
-import { DB } from './db.js?v=1775834769';
-import { esc } from './utils.js?v=1775834769';
+import { S } from './state.js';
+import { DB } from './db.js';
+import { esc, toast } from './utils.js';
 
 export function getInitials(name) {
   if (!name) return '?';
