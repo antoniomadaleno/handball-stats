@@ -6,11 +6,11 @@ import { openDB } from './db.js';
 import { S } from './state.js';
 import { goHome, openSeason, showSec, setBreadcrumb } from './nav.js';
 import { renderSeasons, createSeason, quickToggleEnded, toggleSeasonEnded, deleteSeason, getSeasonById } from './seasons.js';
-import { fillInfoForm, setInfoMode, saveInfo, renderPavilions, addPavilion, removePavilion, addLeague, removeLeague, addCup, removeCup } from './info.js';
+import { fillInfoForm, setInfoMode, saveInfo, renderPavilions, addPavilion, removePavilion } from './info.js';
 import { uploadOwnBadge, removeOwnBadge } from './badge.js';
 import { renderPlayers, openPlayerProfile, openEditCurrentPlayer, deleteCurrentPlayer, openAddPlayer, openEditPlayer, savePlayer, deletePlayer } from './players.js';
 import { renderOpponents, openAddOpponent, openEditOpponent, saveOpponent, openOpponentProfile, saveOpponentAnalysis, openEditCurrentOpponent, deleteCurrentOpponent, openAddOppPlayer, openEditOppPlayer, saveOppPlayer, openOppPlayerProfile, saveOppPlayerNotes, deleteCurrentOppPlayer } from './opponents.js';
-import { renderMatches, openAddMatch, openEditMatch, saveMatch, deleteMatch, openMatchEvents } from './matches.js';
+import { renderMatches, openAddMatch, openEditMatch, saveMatch, deleteMatch, openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad, addGoal, addSave, addConceded, matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer, openMatchEvents } from './matches.js';
 import { closeModal } from './utils.js';
 
 // ── openSeasonById — lookup seguro sem JSON no onclick ──
@@ -29,7 +29,7 @@ export const app = {
   // seasons
   createSeason, quickToggleEnded, toggleSeasonEnded, deleteSeason,
   // info
-  setInfoMode, saveInfo, addPavilion, removePavilion, addLeague, removeLeague, addCup, removeCup,
+  setInfoMode, saveInfo, addPavilion, removePavilion,
   // badge
   uploadOwnBadge, removeOwnBadge,
   // players
@@ -43,6 +43,8 @@ export const app = {
   openOppPlayerProfile, saveOppPlayerNotes, deleteCurrentOppPlayer,
   // matches
   openAddMatch, openEditMatch, saveMatch, deleteMatch, openMatchEvents,
+  openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad,
+  addGoal, addSave, addConceded, matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer,
   // utils
   closeModal,
   // state access (usado no HTML para o botão ← Adversário)
