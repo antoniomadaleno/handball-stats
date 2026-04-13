@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handball Stats</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css?v=1775834769" />
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<div id="header">
+  <div class="logo" onclick="app.goHome()">🤾 HS</div>
+  <div id="breadcrumb"></div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar" class="hidden">
+    <div class="sidebar-season">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <div id="sb-badge" class="team-badge"></div>
+        <div>
+          <div class="sidebar-season-label">Época</div>
+          <div class="sidebar-season-name" id="sb-season-name">—</div>
+        </div>
+      </div>
+      <div id="sb-team-name" style="font-size:12px;color:var(--text2)"></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="app.showSec('info')"      id="nav-info">      <span class="nav-icon">⚙️</span> Informações</div>
+      <div class="nav-item"        onclick="app.showSec('players')"   id="nav-players">   <span class="nav-icon">👤</span> Plantel</div>
+      <div class="nav-item"        onclick="app.showSec('opponents')" id="nav-opponents"> <span class="nav-icon">🛡️</span> Adversários</div>
+      <div class="nav-item"        onclick="app.showSec('matches')"   id="nav-matches">   <span class="nav-icon">🏐</span> Jogos</div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-warn btn-sm" style="width:100%;justify-content:center" id="sb-end-btn" onclick="app.toggleSeasonEnded()">Terminar época</button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ══ HOME ══ -->
+    <div id="page-home" class="page active" style="padding:40px 48px;max-width:720px">
+      <div style="font-family:var(--font-cond);font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Épocas</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:28px">Seleciona uma época para a gerir ou cria uma nova.</div>
+      <div id="seasons-list" style="margin-bottom:24px"></div>
+      <div class="new-season-form">
+        <div class="nst">Nova época</div>
+        <div class="inline-form">
+          <div class="field">
+            <label>Nome</label>
+            <input type="text" id="season-name" placeholder="ex: 2025/26" onkeydown="if(event.key==='Enter')app.createSeason()" />
+          </div>
+          <button class="btn btn-primary" onclick="app.createSeason()">Criar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SEASON ══ -->
+    <div id="page-season" class="page">
+
+      <!-- INFORMAÇÕES -->
+      <div id="sec-info" class="sec active">
+        <div id="info-view">
+          <div class="sec-header">
+            <div><div class="sec-title">Informações</div><div class="sec-sub">Dados gerais da época, equipa técnica e dirigentes.</div></div>
+            <button class="btn btn-secondary" onclick="app.setInfoMode('edit')">Editar</button>
+          </div>
+          <div id="info-view-body"></div>
+        </div>
+        <div id="info-edit" style="display:none">
+          <div class="sec-header">
+            <div><div class="sec-title">Editar informações</div><div class="sec-sub">Dados gerais da época, equipa técnica e dirigentes.</div></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost"    onclick="app.setInfoMode('view')">Cancelar</button>
+              <button class="btn btn-primary"  onclick="app.saveInfo()">Guardar</button>
+            </div>
+          </div>
+          <div class="form-block">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+              <div id="own-badge" class="team-badge badge-upload" onclick="document.getElementById('own-badge-input').click()" title="Clica para carregar emblema"></div>
+              <input type="file" id="own-badge-input" accept="image/*" onchange="app.uploadOwnBadge(this)" />
+              <div>
+                <div class="form-block-title" style="margin-bottom:6px">Equipa</div>
+                <div style="display:flex;gap:6px">
+                  <button class="btn btn-secondary btn-sm" onclick="document.getElementById('own-badge-input').click()">Carregar emblema</button>
+                  <button class="btn btn-ghost btn-sm"     onclick="app.removeOwnBadge()">Remover</button>
+                </div>
+              </div>
+            </div>
+            <div class="grid g2">
+              <div class="field"><label>Nome da equipa</label><input type="text" id="i-team"  placeholder="ex: GD Póvoa" /></div>
+              <div class="field"><label>Abreviatura</label>  <input type="text" id="i-short" placeholder="ex: GDP" maxlength="5" /></div>
+            </div>
+            <div style="margin-top:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <label>Pavilhões</label>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="app.addPavilion()">+ Adicionar pavilhão</button>
+              </div>
+              <div id="pavilions-container"></div>
+            </div>
+          </div>
+          <div class="form-block">
+            <div class="form-block-title">Competição</div>
+            <div class="grid g3">
+              <div class="field"><label>Campeonato</label>    <input type="text" id="i-league"     placeholder="ex: Campeonato Nacional" /></div>
+              <div class="field"><label>Série / Divisão</label><input type="text" id="i-division"   placeholder="ex: Série B" /></div>
+              <div class="field"><label>Federação</label>     <input type="text" id="i-federation" placeholder="ex: FAP" /></div>
+            </div>
+          </div>
+          <div class="form-block">
+            <div class="form-block-title">Equipa técnica</div>
+            <div class="grid g2">
+              <div class="field"><label>Treinador principal</label><input type="text" id="i-coach"   placeholder="Nome" /></div>
+              <div class="field"><label>Treinador adjunto</label>  <input type="text" id="i-coach2"  placeholder="Nome" /></div>
+              <div class="field"><label>Treinador de GR</label>    <input type="text" id="i-coachgr" placeholder="Nome" /></div>
+              <div class="field"><label>Fisioterapeuta</label>     <input type="text" id="i-physio"  placeholder="Nome" /></div>
+            </div>
+          </div>
+          <div class="form-block">
+            <div class="form-block-title">Dirigentes</div>
+            <div class="grid g2">
+              <div class="field"><label>Presidente</label><input type="text" id="i-president" placeholder="Nome" /></div>
+              <div class="field"><label>Delegado</label>  <input type="text" id="i-delegate"  placeholder="Nome" /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PLANTEL -->
+      <div id="sec-players" class="sec">
+        <div class="sec-header">
+          <div><div class="sec-title">Plantel</div><div class="sec-sub" id="players-count">—</div></div>
+          <button class="btn btn-primary" onclick="app.openAddPlayer()">+ Adicionar jogador</button>
+        </div>
+        <div id="players-list"></div>
+      </div>
+
+      <!-- JOGADOR PERFIL -->
+      <div id="sec-player-profile" class="sec">
+        <div class="sec-header">
+          <div style="display:flex;align-items:center;gap:12px">
+            <button class="btn btn-ghost btn-sm" onclick="app.showSec('players')">← Plantel</button>
+            <div><div class="sec-title" id="pp-name">—</div><div class="sec-sub" id="pp-sub">—</div></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="app.openEditCurrentPlayer()">Editar</button>
+            <button class="btn btn-danger"    onclick="app.deleteCurrentPlayer()">Apagar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+          <div class="stat-card"><div class="stat-label">Nº Camisola</div><div class="stat-val" id="pp-shirt">—</div></div>
+          <div class="stat-card"><div class="stat-label">Posição</div>    <div class="stat-val" id="pp-pos">—</div></div>
+          <div class="stat-card"><div class="stat-label">Idade</div>      <div class="stat-val" id="pp-age">—</div></div>
+          <div class="stat-card"><div class="stat-label">Altura / Peso</div><div class="stat-val" id="pp-metrics">—</div></div>
+        </div>
+        <div class="form-block">
+          <div class="form-block-title">Estatísticas da época</div>
+          <div class="empty" style="padding:28px 0">
+            <div class="empty-icon">📊</div>
+            <div class="empty-text">As estatísticas aparecerão aqui quando houver jogos registados.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADVERSÁRIOS -->
+      <div id="sec-opponents" class="sec">
+        <div class="sec-header">
+          <div><div class="sec-title">Adversários</div><div class="sec-sub" id="opponents-count">—</div></div>
+          <button class="btn btn-primary" onclick="app.openAddOpponent()">+ Adicionar adversário</button>
+        </div>
+        <div id="opponents-list"></div>
+      </div>
+
+      <!-- ADVERSÁRIO PERFIL -->
+      <div id="sec-opponent-profile" class="sec">
+        <div class="sec-header">
+          <div style="display:flex;align-items:center;gap:12px">
+            <button class="btn btn-ghost btn-sm" onclick="app.showSec('opponents')">← Adversários</button>
+            <div><div class="sec-title" id="op-name">—</div><div class="sec-sub" id="op-sub">—</div></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="app.openEditCurrentOpponent()">Editar</button>
+            <button class="btn btn-danger"    onclick="app.deleteCurrentOpponent()">Apagar</button>
+          </div>
+        </div>
+        <div class="form-block" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div class="form-block-title" style="margin-bottom:0">Análise</div>
+            <button class="btn btn-primary btn-sm" onclick="app.saveOpponentAnalysis()">Guardar análise</button>
+          </div>
+          <div class="grid g1" style="gap:14px">
+            <div class="field"><label>Momento ofensivo</label>        <textarea id="op-offensive"  rows="4" placeholder="Sistema ofensivo, jogadores chave, padrões de ataque, zonas de finalização..."></textarea></div>
+            <div class="field"><label>Momento defensivo</label>        <textarea id="op-defensive"  rows="4" placeholder="Sistema defensivo, pressão, zona vs individual, fraquezas..."></textarea></div>
+            <div class="field"><label>Bolas paradas / 7 metros</label> <textarea id="op-setpieces"  rows="3" placeholder="Executor habitual de 7m, esquemas de livres, corner..."></textarea></div>
+            <div class="field"><label>Análise de guarda-redes</label>  <textarea id="op-goalkeeper" rows="4" placeholder="Percentagem de defesa, lado preferencial, comportamento nos 7m, saídas, distribuição..."></textarea></div>
+            <div class="field"><label>Notas gerais</label>             <textarea id="op-notes"      rows="3" placeholder="Observações adicionais, contexto, histórico de confrontos..."></textarea></div>
+          </div>
+        </div>
+        <div class="form-block">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div class="form-block-title" style="margin-bottom:0">Plantel</div>
+            <button class="btn btn-secondary btn-sm" onclick="app.openAddOppPlayer()">+ Adicionar jogador</button>
+          </div>
+          <div id="opp-players-list"></div>
+        </div>
+      </div>
+
+      <!-- JOGADOR ADVERSÁRIO PERFIL -->
+      <div id="sec-opp-player-profile" class="sec">
+        <div class="sec-header">
+          <div style="display:flex;align-items:center;gap:12px">
+            <button class="btn btn-ghost btn-sm" onclick="app.openOpponentProfile(app._S().currentOpponentId)">← Adversário</button>
+            <div><div class="sec-title" id="opp-pp-name">—</div><div class="sec-sub" id="opp-pp-sub">—</div></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="app.openEditOppPlayer()">Editar</button>
+            <button class="btn btn-danger"    onclick="app.deleteCurrentOppPlayer()">Apagar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+          <div class="stat-card"><div class="stat-label">Nº Camisola</div>  <div class="stat-val" id="opp-pp-shirt">—</div></div>
+          <div class="stat-card"><div class="stat-label">Posição</div>      <div class="stat-val" id="opp-pp-pos">—</div></div>
+          <div class="stat-card"><div class="stat-label">Idade</div>        <div class="stat-val" id="opp-pp-age">—</div></div>
+          <div class="stat-card"><div class="stat-label">Altura / Peso</div><div class="stat-val" id="opp-pp-metrics">—</div></div>
+        </div>
+        <div class="form-block">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <div class="form-block-title" style="margin-bottom:0">Notas de análise</div>
+            <button class="btn btn-primary btn-sm" onclick="app.saveOppPlayerNotes()">Guardar</button>
+          </div>
+          <div class="grid g2" style="gap:14px">
+            <div class="field"><label>Pontos fortes</label>            <textarea id="opp-pp-strengths"  rows="4" placeholder="Remate, 1x1, velocidade, leitura de jogo..."></textarea></div>
+            <div class="field"><label>Pontos fracos</label>            <textarea id="opp-pp-weaknesses" rows="4" placeholder="Mão fraca, posicionamento defensivo, pressão..."></textarea></div>
+            <div class="field"><label>Comportamento ofensivo</label>   <textarea id="opp-pp-offensive"  rows="3" placeholder="Zonas preferidas, movimentos típicos, tipos de remate..."></textarea></div>
+            <div class="field"><label>Comportamento defensivo</label>  <textarea id="opp-pp-defensive"  rows="3" placeholder="Posicionamento, agressividade, intercepções..."></textarea></div>
+            <div class="field full"><label>Notas gerais</label>        <textarea id="opp-pp-notes"      rows="3" placeholder="Outras observações relevantes..."></textarea></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- JOGOS -->
+      <div id="sec-matches" class="sec">
+        <div class="sec-header">
+          <div><div class="sec-title">Jogos</div><div class="sec-sub" id="matches-count">—</div></div>
+          <button class="btn btn-primary" onclick="app.openAddMatch()">+ Criar jogo</button>
+        </div>
+        <div id="matches-list"></div>
+      </div>
+
+    </div><!-- /page-season -->
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<!-- ══ MODAIS ══ -->
+
+<!-- Jogador próprio -->
+<div class="modal-backdrop" id="modal-player">
+  <div class="modal">
+    <div class="modal-title" id="modal-player-title">Adicionar jogador</div>
+    <input type="hidden" id="mp-id" />
+    <div class="grid g3" style="margin-bottom:0">
+      <div class="field full"><label>Nome</label><input type="text" id="mp-name" placeholder="ex: João Silva" /></div>
+      <div class="field"><label>Data de nascimento</label><input type="date" id="mp-dob" /></div>
+      <div class="field"><label>Posição</label>
+        <select id="mp-position">
+          <option value="">Selecionar...</option>
+          <option value="GR">Guarda-redes</option>
+          <option value="EE">Extremo Esquerdo</option>
+          <option value="LE">Lateral Esquerdo</option>
+          <option value="CE">Central</option>
+          <option value="LD">Lateral Direito</option>
+          <option value="ED">Extremo Direito</option>
+          <option value="PI">Pivot</option>
+        </select>
+      </div>
+      <div class="field"><label>Nº Camisola</label><input type="number" id="mp-shirt"  placeholder="7"   min="1" max="99" /></div>
+      <div class="field"><label>Peso (kg)</label>  <input type="number" id="mp-weight" placeholder="82" /></div>
+      <div class="field"><label>Altura (cm)</label><input type="number" id="mp-height" placeholder="185" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-player')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.savePlayer()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Adversário -->
+<div class="modal-backdrop" id="modal-opponent">
+  <div class="modal">
+    <div class="modal-title" id="modal-opp-title">Adicionar adversário</div>
+    <input type="hidden" id="mo-id" />
+    <div class="grid g2" style="margin-bottom:0">
+      <div class="field"><label>Nome</label>        <input type="text" id="mo-name"  placeholder="ex: Sporting CP" /></div>
+      <div class="field"><label>Abreviatura</label> <input type="text" id="mo-short" placeholder="ex: SCP" maxlength="5" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-opponent')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.saveOpponent()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Jogo -->
+<div class="modal-backdrop" id="modal-match">
+  <div class="modal">
+    <div class="modal-title" id="modal-match-title">Criar jogo</div>
+    <input type="hidden" id="mm-id" />
+    <div class="grid g2" style="margin-bottom:0">
+      <div class="field"><label>Tipo</label>
+        <select id="mm-type">
+          <option value="proprio">Jogo próprio</option>
+          <option value="scout">Scout (adversário)</option>
+        </select>
+      </div>
+      <div class="field"><label>Adversário</label><select id="mm-opponent"></select></div>
+      <div class="field"><label>Casa / Fora</label>
+        <select id="mm-home">
+          <option value="home">Casa</option>
+          <option value="away">Fora</option>
+        </select>
+      </div>
+      <div class="field"><label>Competição</label><input type="text"           id="mm-competition" placeholder="ex: Campeonato" /></div>
+      <div class="field"><label>Data e hora</label><input type="datetime-local" id="mm-datetime" /></div>
+      <div class="field"><label>Local</label>      <input type="text"           id="mm-venue"       placeholder="ex: Pavilhão Municipal" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-match')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.saveMatch()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Jogador adversário -->
+<div class="modal-backdrop" id="modal-opp-player">
+  <div class="modal">
+    <div class="modal-title" id="modal-opp-player-title">Adicionar jogador</div>
+    <input type="hidden" id="mop-id" />
+    <div class="grid g3" style="margin-bottom:0">
+      <div class="field full"><label>Nome</label><input type="text" id="mop-name" placeholder="ex: Carlos Silva" /></div>
+      <div class="field"><label>Data de nascimento</label><input type="date" id="mop-dob" /></div>
+      <div class="field"><label>Posição</label>
+        <select id="mop-position">
+          <option value="">Selecionar...</option>
+          <option value="GR">Guarda-redes</option>
+          <option value="EE">Extremo Esquerdo</option>
+          <option value="LE">Lateral Esquerdo</option>
+          <option value="CE">Central</option>
+          <option value="LD">Lateral Direito</option>
+          <option value="ED">Extremo Direito</option>
+          <option value="PI">Pivot</option>
+        </select>
+      </div>
+      <div class="field"><label>Nº Camisola</label><input type="number" id="mop-shirt"  placeholder="7"   min="1" max="99" /></div>
+      <div class="field"><label>Peso (kg)</label>  <input type="number" id="mop-weight" placeholder="82" /></div>
+      <div class="field"><label>Altura (cm)</label><input type="number" id="mop-height" placeholder="185" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-opp-player')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.saveOppPlayer()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ENTRY POINT ══ -->
+<script>
+// Proxy para garantir que app.xxx() funciona mesmo antes do módulo carregar
+// Os onclick do HTML chamam app.xxx() — se o módulo ainda não carregou,
+// a chamada é enfileirada e executada assim que estiver pronto.
+window._appQueue = [];
+window.app = new Proxy({}, {
+  get(_, key) {
+    return (...args) => {
+      if (window._appReady && window._appReady[key]) {
+        return window._appReady[key](...args);
+      }
+      window._appQueue.push({ key, args });
+    };
+  }
+});
+</script>
+<script type="module">
+import * as mod from './js/app.js';
+window._appReady = mod.app;
+// Drena a fila de chamadas que chegaram antes do módulo estar pronto
+(window._appQueue || []).forEach(({ key, args }) => {
+  if (mod.app[key]) mod.app[key](...args);
+});
+window._appQueue = [];
+</script>
+
+</body>
+</html>

@@ -1,0 +1,9 @@
+na vista do jogador a imagem da posiçao deve ser maior, está muito muito pequena, tambem deve dar a opçao de colocar posiçoes secundarias, do tipo um lateral que tambem joga bem a central
+
+
+
+a abreviatura deve ser o equivalente ao que se mete no nome da equipa quando nao ha simbolo, ou seja as letras.
+
+
+
+adicionar competiçoes pq pode se ter mais taça e outras competiçoes
