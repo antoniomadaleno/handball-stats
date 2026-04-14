@@ -159,3 +159,7 @@ select option{background:var(--surface2);}
 .badge-upload:hover{border-color:var(--accent-dim);}
 .badge-upload .initials{font-size:16px;}
 input[type="file"]{display:none;}
+/* ── MATCH TABS ── */
+.md-tab{transition:color 0.15s,border-color 0.15s;}
+.md-tab:hover{color:var(--text)!important;}
+.md-tab.active{color:var(--accent)!important;border-bottom-color:var(--accent)!important;}

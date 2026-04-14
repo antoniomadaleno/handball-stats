@@ -6,10 +6,50 @@ import { S } from './state.js';
 import { DB } from './db.js';
 import { esc, toast, closeModal, fmtDatetime, emptyState } from './utils.js';
 
-// ── Estado do jogo em curso ────────────────
+// ── Estado ─────────────────────────────────
 let _match = null;
+let _players = [];       // jogadores convocados (objetos completos)
 let _timerInterval = null;
 let _timerRunning = false;
+let _activeTab = 'entrada';
+let _selectedPlayerId = null;
+let _pendingAction = null; // { playerId, actionKey, fieldX, fieldY, goalX, goalY }
+
+// ── Ações disponíveis ──────────────────────
+const ACTIONS_FIELD = [
+  { key: 'golo_9m',   label: 'Golo de 9m',          goal: true  },
+  { key: 'golo_7m',   label: 'Golo de 7m',           goal: true  },
+  { key: 'golo_6m',   label: 'Golo de 6m',           goal: true  },
+  { key: 'golo_ponta',label: 'Golo de Ponta',        goal: true  },
+  { key: 'golo_ca',   label: 'Golo de Contra-Ataque',goal: true  },
+  { key: 'golo_pen',  label: 'Golo de Penetração',   goal: true  },
+  { key: 'falha_9m',  label: 'Falha de 9m',          goal: false },
+  { key: 'falha_7m',  label: 'Falha de 7m',          goal: false },
+  { key: 'falha_6m',  label: 'Falha de 6m',          goal: false },
+  { key: 'falha_ponta',label:'Falha de Ponta',       goal: false },
+  { key: 'falha_ca',  label: 'Falha de Contra-Ataque',goal: false},
+  { key: 'falha_pen', label: 'Falha de Penetração',  goal: false },
+  { key: 'bola_perdida',   label: 'Bola perdida',    goal: false },
+  { key: 'recuperacao',    label: 'Recuperação bola',goal: false },
+  { key: 'assistencia',    label: 'Assistência',     goal: false },
+];
+
+const ACTIONS_GK = [
+  { key: 'defesa_9m',  label: 'Defesa de 9m',           save: true  },
+  { key: 'defesa_7m',  label: 'Defesa de 7m',           save: true  },
+  { key: 'defesa_6m',  label: 'Defesa de 6m',           save: true  },
+  { key: 'defesa_ponta',label:'Defesa de Ponta',        save: true  },
+  { key: 'defesa_ca',  label: 'Defesa de Contra-Ataque',save: true  },
+  { key: 'defesa_pen', label: 'Defesa de Penetração',   save: true  },
+  { key: 'sofreu_9m',  label: 'Golo sofrido de 9m',     conc: true  },
+  { key: 'sofreu_7m',  label: 'Golo sofrido de 7m',     conc: true  },
+  { key: 'sofreu_6m',  label: 'Golo sofrido de 6m',     conc: true  },
+  { key: 'sofreu_ponta',label:'Golo sofrido de Ponta',  conc: true  },
+  { key: 'sofreu_ca',  label: 'Golo sofrido de Contra-Ataque', conc: true },
+  { key: 'sofreu_pen', label: 'Golo sofrido de Penetração',    conc: true },
+  { key: 'bola_perdida',   label: 'Bola perdida',       conc: false },
+  { key: 'recuperacao',    label: 'Recuperação bola',   conc: false },
+];
 
 // ── Lista de jogos ─────────────────────────
 
@@ -29,9 +69,8 @@ export function renderMatches() {
       const home = m.home === 'home' ? myShort : opp.short_name;
       const away = m.home === 'home' ? opp.short_name : myShort;
       const date = m.datetime ? fmtDatetime(new Date(m.datetime)) : 'Data não definida';
-      const scoreOur = m.stats ? m.stats.scoreOur : null;
-      const scoreOpp = m.stats ? m.stats.scoreOpp : null;
-      const scoreTxt = (scoreOur !== null && scoreOpp !== null) ? ` · ${scoreOur}–${scoreOpp}` : '';
+      const s = m.stats;
+      const scoreTxt = s ? ` · ${s.scoreOur}–${s.scoreOpp}` : '';
       const statusBadge = {
         'por_começar': '<span class="badge b-scout">Por começar</span>',
         'a_decorrer':  '<span class="badge b-active">A decorrer</span>',
@@ -40,7 +79,7 @@ export function renderMatches() {
       return `<div class="match-card">
         <div style="font-size:18px">🏐</div>
         <div style="flex:1">
-          <div class="match-vs">${home} <span style="color:var(--text3)">vs</span> ${away}${m.type === 'scout' ? ' <span class="badge b-scout">Scout</span>' : ''} ${statusBadge}${scoreTxt}</div>
+          <div class="match-vs">${home} <span style="color:var(--text3)">vs</span> ${away} ${statusBadge}${scoreTxt}</div>
           <div class="match-meta">${date} · ${m.competition || '—'} · ${m.venue || '—'}</div>
         </div>
         <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
@@ -107,7 +146,7 @@ export function deleteMatch(id) {
   DB.matches.del(id).then(() => { renderMatches(); toast('Jogo apagado'); });
 }
 
-// ── Detalhe do jogo ────────────────────────
+// ── Abrir detalhe ──────────────────────────
 
 export function openMatchDetail(id) {
   Promise.all([
@@ -122,32 +161,37 @@ export function openMatchDetail(id) {
     const info    = S.season.info || {};
     const myShort = info.teamShort || 'NÓS';
     const myName  = info.teamName  || 'Nós';
-    const home    = m.home === 'home';
 
-    document.getElementById('md-title').textContent = home
-      ? `${myShort} vs ${opp.short_name}`
-      : `${opp.short_name} vs ${myShort}`;
-    document.getElementById('md-meta').textContent =
-      (m.datetime ? fmtDatetime(new Date(m.datetime)) : '') +
-      (m.competition ? ' · ' + m.competition : '') +
-      (m.venue ? ' · ' + m.venue : '');
+    if (!m.stats) m.stats = {
+      scoreOur: 0, scoreOpp: 0,
+      period: 1, timerSecs: 0,
+      squad: null, players: {}, events: []
+    };
+    if (!m.stats.events)  m.stats.events  = [];
+    if (!m.stats.players) m.stats.players = {};
 
-    document.getElementById('md-our-name').textContent = myName.toUpperCase();
-    document.getElementById('md-opp-name').textContent = opp.name.toUpperCase();
-    document.getElementById('md-status').value = m.status || 'por_começar';
-
-    if (!m.stats) m.stats = { scoreOur: 0, scoreOpp: 0, period: 1, timerSecs: 0, squad: null, players: {} };
-
-    updateScoreboard();
+    // Header
+    document.getElementById('md-our-short').textContent  = myShort;
+    document.getElementById('md-opp-short').textContent  = opp.short_name;
+    document.getElementById('md-score-our').textContent  = m.stats.scoreOur;
+    document.getElementById('md-score-opp').textContent  = m.stats.scoreOpp;
+    document.getElementById('md-status').value           = m.status || 'por_começar';
     updateTimerDisplay();
     updateTimerButtons();
 
+    // Squad
     const hasSquad = m.stats.squad && m.stats.squad.length > 0;
-    document.getElementById('md-squad-section').style.display = hasSquad ? 'none' : '';
-    document.getElementById('md-stats-section').style.display = hasSquad ? '' : 'none';
-
-    if (hasSquad) renderStatsTable(players);
-    else renderSquadPicker(players);
+    if (hasSquad) {
+      _players = players.filter(p => m.stats.squad.includes(p.id));
+      document.getElementById('md-squad-section').style.display = 'none';
+      document.getElementById('md-tabs-section').style.display  = '';
+      switchTab('entrada');
+    } else {
+      _players = [];
+      document.getElementById('md-squad-section').style.display = '';
+      document.getElementById('md-tabs-section').style.display  = 'none';
+      renderSquadPicker(players);
+    }
 
     document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -159,13 +203,15 @@ export function openMatchDetail(id) {
 export function closeMatchDetail() {
   timerStop();
   _match = null;
+  _players = [];
+  _selectedPlayerId = null;
   if(window.app) window.app.showSec('matches');
 }
 
 export function saveMatchStatus() {
   if (!_match) return;
   _match.status = document.getElementById('md-status').value;
-  DB.matches.put(_match).then(() => toast('Estado atualizado', 'success'));
+  DB.matches.put(_match);
 }
 
 // ── Convocados ─────────────────────────────
@@ -187,132 +233,464 @@ export function confirmSquad() {
   const checked = [...document.querySelectorAll('#md-squad-list input[type=checkbox]:checked')];
   if (!checked.length) return toast('Seleciona pelo menos um jogador', 'error');
   _match.stats.squad = checked.map(c => parseInt(c.dataset.pid));
-  DB.matches.put(_match).then(() => {
-    document.getElementById('md-squad-section').style.display = 'none';
-    document.getElementById('md-stats-section').style.display = '';
-    DB.players.bySeason(S.season.id).then(players => renderStatsTable(players));
-    toast('Convocados confirmados', 'success');
+  DB.players.bySeason(S.season.id).then(players => {
+    _players = players.filter(p => _match.stats.squad.includes(p.id));
+    DB.matches.put(_match).then(() => {
+      document.getElementById('md-squad-section').style.display = 'none';
+      document.getElementById('md-tabs-section').style.display  = '';
+      switchTab('entrada');
+      toast('Convocados confirmados', 'success');
+    });
   });
 }
 
-// ── Tabela de stats ────────────────────────
+// ── Tabs ───────────────────────────────────
 
-function renderStatsTable(allPlayers) {
-  const squad   = _match.stats.squad || [];
-  const players = allPlayers.filter(p => squad.includes(p.id));
-  const stats   = _match.stats.players || {};
+export function switchTab(tab) {
+  _activeTab = tab;
+  _selectedPlayerId = null;
+  document.querySelectorAll('.md-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.querySelectorAll('.md-tab-content').forEach(c => {
+    c.style.display = c.dataset.tab === tab ? '' : 'none';
+  });
+  if (tab === 'entrada')   renderEntrada();
+  if (tab === 'jogadores') renderJogadores();
+  if (tab === 'jogo')      renderJogo();
+  if (tab === 'resultado') renderResultado();
+}
+
+// ── TAB: ENTRADA ───────────────────────────
+
+function renderEntrada() {
+  const players = _players.slice().sort((a,b) => (a.shirt||99)-(b.shirt||99));
   const gks     = players.filter(p => p.position === 'GR');
-  const fields  = players.filter(p => p.position !== 'GR').sort((a,b) => (a.shirt||99)-(b.shirt||99));
+  const fields  = players.filter(p => p.position !== 'GR');
 
-  // GR
-  const gkEl = document.getElementById('md-gk-list');
-  gkEl.innerHTML = !gks.length ? emptyState('👤', 'Sem GR convocados.') :
-    gks.map(p => {
-      const ps = stats[p.id] || { goals: 0, saves: 0, conceded: 0 };
-      return `<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:12px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="player-shirt" style="width:32px;height:32px;font-size:13px">${p.shirt || '—'}</div>
-          <div style="font-family:var(--font-cond);font-size:14px;font-weight:600">${esc(p.name)}</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Defesas</div>
-          <div style="font-family:var(--font-cond);font-size:22px;font-weight:700;color:var(--success)">${ps.saves}</div>
-          <button class="btn btn-success btn-sm" onclick="app.addSave(${p.id})" style="margin-top:6px">+ Defesa</button>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Golos sofridos</div>
-          <div style="font-family:var(--font-cond);font-size:22px;font-weight:700;color:var(--danger)">${ps.conceded}</div>
-          <button class="btn btn-danger btn-sm" onclick="app.addConceded(${p.id})" style="margin-top:6px">+ Golo sofrido</button>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Golos marcados</div>
-          <div style="font-family:var(--font-cond);font-size:22px;font-weight:700;color:var(--accent)">${ps.goals}</div>
-          <button class="btn btn-primary btn-sm" onclick="app.addGoal(${p.id})" style="margin-top:6px">+ Golo</button>
-        </div>
-      </div>`;
-    }).join('');
+  // Lista de jogadores
+  const playerList = [...gks, ...fields].map(p => `
+    <div class="md-player-item ${_selectedPlayerId === p.id ? 'selected' : ''}"
+         onclick="app.selectPlayer(${p.id})"
+         style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:6px;cursor:pointer;margin-bottom:3px;background:${_selectedPlayerId === p.id ? 'var(--accent)' : 'var(--surface2)'};border:1px solid ${_selectedPlayerId === p.id ? 'var(--accent)' : 'var(--border)'};transition:all 0.1s">
+      <div style="width:28px;height:28px;border-radius:5px;background:${_selectedPlayerId === p.id ? 'rgba(0,0,0,0.2)' : 'var(--surface)'};display:flex;align-items:center;justify-content:center;font-family:var(--font-cond);font-size:13px;font-weight:700;color:${_selectedPlayerId === p.id ? '#0d0f14' : 'var(--accent)'}">${p.shirt || '—'}</div>
+      <span style="font-family:var(--font-cond);font-size:13px;font-weight:600;flex:1;color:${_selectedPlayerId === p.id ? '#0d0f14' : 'var(--text)'}">${esc(p.name)}</span>
+      ${p.position === 'GR' ? `<span style="font-size:9px;font-weight:700;color:${_selectedPlayerId === p.id ? '#0d0f14' : 'var(--blue)'}">GR</span>` : ''}
+    </div>`).join('');
 
-  // Campo
-  const fieldEl = document.getElementById('md-field-list');
-  fieldEl.innerHTML = !fields.length ? emptyState('👤', 'Sem jogadores de campo convocados.') :
-    fields.map(p => {
-      const ps = stats[p.id] || { goals: 0, saves: 0, conceded: 0 };
-      return `<div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:6px">
-        <div class="player-shirt" style="width:32px;height:32px;font-size:13px">${p.shirt || '—'}</div>
-        <div>
-          <div style="font-family:var(--font-cond);font-size:14px;font-weight:600">${esc(p.name)}</div>
-          <span class="pos pos-${p.position}" style="font-size:9px">${p.position}</span>
-        </div>
-        <div style="font-family:var(--font-cond);font-size:28px;font-weight:700;color:var(--accent);text-align:center;min-width:48px">${ps.goals}</div>
-        <button class="btn btn-primary btn-sm" onclick="app.addGoal(${p.id})">+ Golo</button>
-      </div>`;
-    }).join('');
+  // Ações
+  const sel = _players.find(p => p.id === _selectedPlayerId);
+  const isGK = sel && sel.position === 'GR';
+  const actions = sel ? (isGK ? ACTIONS_GK : ACTIONS_FIELD) : [];
+  const actionsHtml = !sel
+    ? `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:13px;padding:20px;text-align:center">← Seleciona um jogador</div>`
+    : actions.map(a => {
+        const isGoal = a.goal || a.save;
+        const color  = a.goal ? 'var(--accent)' : a.save ? 'var(--success)' : a.conc ? 'var(--danger)' : 'var(--text2)';
+        return `<button onclick="app.registerAction(${_selectedPlayerId},'${a.key}')"
+          style="display:block;width:100%;text-align:left;padding:10px 14px;margin-bottom:3px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);font-family:'Barlow',sans-serif;font-size:13px;font-weight:${isGoal ? '600' : '400'};color:${color};cursor:pointer;transition:background 0.1s"
+          onmouseover="this.style.background='var(--surface)'"
+          onmouseout="this.style.background='var(--surface2)'">${a.label}</button>`;
+      }).join('');
+
+  document.getElementById('md-entrada-players').innerHTML = playerList;
+  document.getElementById('md-entrada-actions').innerHTML = actionsHtml;
 }
 
-function refreshStats() {
-  DB.players.bySeason(S.season.id).then(players => renderStatsTable(players));
+export function selectPlayer(id) {
+  _selectedPlayerId = (_selectedPlayerId === id) ? null : id;
+  renderEntrada();
 }
 
-// ── Ações ──────────────────────────────────
-
-export function addGoal(playerId) {
+export function registerAction(playerId, actionKey) {
   if (!_match) return;
-  if (!_match.stats.players[playerId]) _match.stats.players[playerId] = { goals: 0, saves: 0, conceded: 0 };
-  _match.stats.players[playerId].goals++;
-  _match.stats.scoreOur++;
-  DB.matches.put(_match).then(() => { updateScoreboard(); refreshStats(); });
+  const p = _players.find(x => x.id === playerId);
+  if (!p) return;
+  const action = [...ACTIONS_FIELD, ...ACTIONS_GK].find(a => a.key === actionKey);
+  const needsLocation = action && (action.goal || action.save || action.conc || actionKey.startsWith('falha_'));
+  if (needsLocation) {
+    _pendingAction = { playerId, actionKey };
+    openLocationModal(actionKey, action);
+    return;
+  }
+  commitAction(playerId, actionKey, null, null, null, null);
 }
 
-export function addSave(playerId) {
+function openLocationModal(actionKey, action) {
+  const isGoalOrSave = action && (action.goal || action.save || action.conc);
+  document.getElementById('loc-field-dot').style.display = 'none';
+  document.getElementById('loc-goal-dot').style.display  = 'none';
+  document.getElementById('loc-action-label').textContent = action ? action.label : actionKey;
+  // Mostra/esconde secção da baliza
+  const goalSection = document.getElementById('loc-goal-section');
+  if (goalSection) goalSection.style.display = isGoalOrSave ? '' : 'none';
+  _pendingAction.fieldX = null; _pendingAction.fieldY = null;
+  _pendingAction.goalX  = null; _pendingAction.goalY  = null;
+  document.getElementById('modal-location').classList.add('open');
+}
+
+export function locFieldClick(e) {
+  const svg = e.currentTarget;
+  const rect = svg.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left) / rect.width * 100);
+  const y = Math.round((e.clientY - rect.top)  / rect.height * 100);
+  _pendingAction.fieldX = x; _pendingAction.fieldY = y;
+  const dot = document.getElementById('loc-field-dot');
+  dot.style.display = '';
+  dot.style.left = x + '%'; dot.style.top = y + '%';
+}
+
+export function locGoalClick(e) {
+  const svg = e.currentTarget;
+  const rect = svg.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left) / rect.width * 100);
+  const y = Math.round((e.clientY - rect.top)  / rect.height * 100);
+  _pendingAction.goalX = x; _pendingAction.goalY = y;
+  const dot = document.getElementById('loc-goal-dot');
+  dot.style.display = '';
+  dot.style.left = x + '%'; dot.style.top = y + '%';
+}
+
+export function locNextStep() {
+  // Kept for compatibility — single-screen layout no longer needs step navigation
+  locConfirm();
+}
+
+export function locConfirm() {
+  if (!_pendingAction) return;
+  document.getElementById('modal-location').classList.remove('open');
+  const { playerId, actionKey, fieldX, fieldY, goalX, goalY } = _pendingAction;
+  _pendingAction = null;
+  commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY);
+}
+
+export function locSkip() {
+  if (!_pendingAction) return;
+  document.getElementById('modal-location').classList.remove('open');
+  const { playerId, actionKey } = _pendingAction;
+  _pendingAction = null;
+  commitAction(playerId, actionKey, null, null, null, null);
+}
+
+function commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY) {
   if (!_match) return;
-  if (!_match.stats.players[playerId]) _match.stats.players[playerId] = { goals: 0, saves: 0, conceded: 0 };
-  _match.stats.players[playerId].saves++;
-  DB.matches.put(_match).then(() => refreshStats());
+  const p = _players.find(x => x.id === playerId);
+  if (!p) return;
+
+  if (!_match.stats.players[playerId]) {
+    _match.stats.players[playerId] = { goals: 0, shots: 0, saves: 0, conceded: 0, actions: {} };
+  }
+  const ps = _match.stats.players[playerId];
+  if (!ps.actions) ps.actions = {};
+  ps.actions[actionKey] = (ps.actions[actionKey] || 0) + 1;
+
+  const action = [...ACTIONS_FIELD, ...ACTIONS_GK].find(a => a.key === actionKey);
+  if (action) {
+    if (action.goal)  { ps.goals++; ps.shots++; _match.stats.scoreOur++; }
+    if (action.save)  { ps.saves++; }
+    if (action.conc)  { ps.conceded++; _match.stats.scoreOpp++; }
+    if (actionKey.startsWith('falha_')) ps.shots++;
+  }
+
+  _match.stats.events.push({
+    t: _match.stats.timerSecs,
+    period: _match.stats.period,
+    playerId, action: actionKey,
+    playerName: p.name, shirt: p.shirt,
+    fieldX, fieldY, goalX, goalY,
+  });
+
+  DB.matches.put(_match).then(() => {
+    updateScoreboard();
+    renderEntrada();
+    toast(action ? action.label : actionKey, action && (action.goal || action.save) ? 'success' : '');
+  });
 }
 
-export function addConceded(playerId) {
-  if (!_match) return;
-  if (!_match.stats.players[playerId]) _match.stats.players[playerId] = { goals: 0, saves: 0, conceded: 0 };
-  _match.stats.players[playerId].conceded++;
-  _match.stats.scoreOpp++;
-  DB.matches.put(_match).then(() => { updateScoreboard(); refreshStats(); });
+// ── TAB: JOGADORES ─────────────────────────
+
+function renderJogadores() {
+  const stats = _match.stats.players || {};
+  const gks    = _players.filter(p => p.position === 'GR');
+  const fields = _players.filter(p => p.position !== 'GR').sort((a,b) => (a.shirt||99)-(b.shirt||99));
+
+  const pct = (a, b) => b > 0 ? Math.round(a/b*100) + '%' : '—';
+
+  const headerRow = `<div style="display:grid;grid-template-columns:30px 1fr 40px 40px 60px 40px 40px 40px 40px 40px;gap:4px;padding:6px 10px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:4px">
+    <div></div><div>Jogador</div><div style="text-align:center">G</div><div style="text-align:center">R</div><div style="text-align:center">%R</div>
+    <div style="text-align:center">7m</div><div style="text-align:center">Pen</div><div style="text-align:center">Ponta</div><div style="text-align:center">CA</div><div style="text-align:center">9m</div>
+  </div>`;
+
+  const playerRow = (p) => {
+    const ps = stats[p.id] || {};
+    const ac = ps.actions || {};
+    const goals = ps.goals || 0;
+    const goloKeys = Object.keys(ac).filter(k => k.startsWith('golo_'));
+    const falhaKeys = Object.keys(ac).filter(k => k.startsWith('falha_'));
+    const shots = goloKeys.reduce((s,k) => s+(ac[k]||0), 0) + falhaKeys.reduce((s,k) => s+(ac[k]||0), 0);
+    const g7m   = ac.golo_7m   || 0; const f7m  = ac.falha_7m   || 0;
+    const gpen  = ac.golo_pen  || 0; const fpen = ac.falha_pen  || 0;
+    const gpnt  = ac.golo_ponta|| 0; const fpnt = ac.falha_ponta|| 0;
+    const gca   = ac.golo_ca   || 0; const fca  = ac.falha_ca   || 0;
+    const g9m   = ac.golo_9m   || 0; const f9m  = ac.falha_9m   || 0;
+    return `<div style="display:grid;grid-template-columns:30px 1fr 40px 40px 60px 40px 40px 40px 40px 40px;gap:4px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:3px;align-items:center;font-size:12px">
+      <div style="font-family:var(--font-cond);font-size:13px;font-weight:700;color:var(--accent)">${p.shirt||'—'}</div>
+      <div style="font-family:var(--font-cond);font-size:13px;font-weight:600">${esc(p.name)}</div>
+      <div style="text-align:center;font-weight:700;color:var(--accent)">${goals}</div>
+      <div style="text-align:center">${shots}</div>
+      <div style="text-align:center;color:var(--text2)">${pct(goals,shots)}</div>
+      <div style="text-align:center;color:var(--text2)">${g7m+f7m > 0 ? g7m+'/'+(g7m+f7m) : '—'}</div>
+      <div style="text-align:center;color:var(--text2)">${gpen+fpen > 0 ? gpen+'/'+(gpen+fpen) : '—'}</div>
+      <div style="text-align:center;color:var(--text2)">${gpnt+fpnt > 0 ? gpnt+'/'+(gpnt+fpnt) : '—'}</div>
+      <div style="text-align:center;color:var(--text2)">${gca+fca > 0 ? gca+'/'+(gca+fca) : '—'}</div>
+      <div style="text-align:center;color:var(--text2)">${g9m+f9m > 0 ? g9m+'/'+(g9m+f9m) : '—'}</div>
+    </div>`;
+  };
+
+  const gkHeader = `<div style="display:grid;grid-template-columns:30px 1fr 50px 50px 60px;gap:4px;padding:6px 10px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border);margin-bottom:4px">
+    <div></div><div>GR</div><div style="text-align:center">Defesas</div><div style="text-align:center">Sofridos</div><div style="text-align:center">%Def</div>
+  </div>`;
+
+  const gkRow = (p) => {
+    const ps = stats[p.id] || {};
+    const saves   = ps.saves    || 0;
+    const conceded= ps.conceded || 0;
+    const total   = saves + conceded;
+    return `<div style="display:grid;grid-template-columns:30px 1fr 50px 50px 60px;gap:4px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:3px;align-items:center;font-size:12px">
+      <div style="font-family:var(--font-cond);font-size:13px;font-weight:700;color:var(--accent)">${p.shirt||'—'}</div>
+      <div style="font-family:var(--font-cond);font-size:13px;font-weight:600">${esc(p.name)}</div>
+      <div style="text-align:center;font-weight:700;color:var(--success)">${saves}</div>
+      <div style="text-align:center;font-weight:700;color:var(--danger)">${conceded}</div>
+      <div style="text-align:center;color:var(--text2)">${pct(saves,total)}</div>
+    </div>`;
+  };
+
+  let html = '';
+  if (gks.length) html += `<div style="margin-bottom:16px">${gkHeader}${gks.map(gkRow).join('')}</div>`;
+  if (fields.length) html += `<div>${headerRow}${fields.map(playerRow).join('')}</div>`;
+  if (!html) html = emptyState('👤', 'Sem dados ainda.');
+
+  document.getElementById('md-tab-jogadores').innerHTML = html;
 }
 
-// ── Placard ────────────────────────────────
+// ── TAB: JOGO ──────────────────────────────
+
+function calcJogoStats(periodFilter) {
+  // periodFilter: null = total, 1 = 1ª parte, 2 = 2ª parte
+  const stats  = _match.stats.players || {};
+  const events = _match.stats.events  || [];
+
+  // Para filtrar por parte, recalcula a partir dos eventos
+  const getAc = (playerId) => {
+    if (periodFilter === null) {
+      return (stats[playerId] || {}).actions || {};
+    }
+    // Recalcula apenas eventos da parte filtrada
+    const ac = {};
+    events.filter(e => e.playerId === playerId && e.period === periodFilter).forEach(e => {
+      ac[e.action] = (ac[e.action] || 0) + 1;
+    });
+    return ac;
+  };
+
+  let shots=0, goals=0, g7m=0, f7m=0, g6m=0, f6m=0, gPen=0, fPen=0, gPnt=0, fPnt=0, gCA=0, fCA=0, g9m=0, f9m=0;
+  let gkSaves=0, gkConceded=0, gkS7m=0, gkC7m=0, gkS6m=0, gkC6m=0, gkSPen=0, gkCPen=0, gkSPnt=0, gkCPnt=0, gkSCA=0, gkCCA=0, gkS9m=0, gkC9m=0;
+
+  _players.forEach(p => {
+    const ac = getAc(p.id);
+    if (p.position !== 'GR') {
+      g7m  += ac.golo_7m    ||0; f7m  += ac.falha_7m    ||0;
+      g6m  += ac.golo_6m    ||0; f6m  += ac.falha_6m    ||0;
+      gPen += ac.golo_pen   ||0; fPen += ac.falha_pen   ||0;
+      gPnt += ac.golo_ponta ||0; fPnt += ac.falha_ponta ||0;
+      gCA  += ac.golo_ca    ||0; fCA  += ac.falha_ca    ||0;
+      g9m  += ac.golo_9m    ||0; f9m  += ac.falha_9m    ||0;
+      Object.keys(ac).filter(k=>k.startsWith('golo_')).forEach(k=>{goals+=ac[k];shots+=ac[k];});
+      Object.keys(ac).filter(k=>k.startsWith('falha_')).forEach(k=>{shots+=ac[k];});
+    } else {
+      gkS7m  += ac.defesa_7m    ||0; gkC7m  += ac.sofreu_7m    ||0;
+      gkS6m  += ac.defesa_6m    ||0; gkC6m  += ac.sofreu_6m    ||0;
+      gkSPen += ac.defesa_pen   ||0; gkCPen += ac.sofreu_pen   ||0;
+      gkSPnt += ac.defesa_ponta ||0; gkCPnt += ac.sofreu_ponta ||0;
+      gkSCA  += ac.defesa_ca    ||0; gkCCA  += ac.sofreu_ca    ||0;
+      gkS9m  += ac.defesa_9m    ||0; gkC9m  += ac.sofreu_9m    ||0;
+      gkSaves    += Object.keys(ac).filter(k=>k.startsWith('defesa_')).reduce((s,k)=>s+(ac[k]||0),0);
+      gkConceded += Object.keys(ac).filter(k=>k.startsWith('sofreu_')).reduce((s,k)=>s+(ac[k]||0),0);
+    }
+  });
+
+  const fmtRatio = (g, t) => t > 0 ? `${g}/${t}` : '—';
+  const pct = (g, t) => t > 0 ? Math.round(g/t*100)+'%' : '—';
+
+  return {
+    shots, goals, g7m,f7m, g6m,f6m, gPen,fPen, gPnt,fPnt, gCA,fCA, g9m,f9m,
+    gkSaves, gkConceded, gkS7m,gkC7m, gkS6m,gkC6m, gkSPen,gkCPen, gkSPnt,gkCPnt, gkSCA,gkCCA, gkS9m,gkC9m,
+    fmtRatio, pct,
+    pctShots: pct(goals, shots),
+    pctDef:   pct(gkSaves, gkSaves+gkConceded),
+  };
+}
+
+function renderJogo() {
+  const info    = S.season.info || {};
+  const myShort = info.teamShort || 'NÓS';
+  const oppName = document.getElementById('md-opp-short').textContent;
+  const oppGoals = _match.stats.scoreOpp;
+
+  const t  = calcJogoStats(null);
+  const p1 = calcJogoStats(1);
+  const p2 = calcJogoStats(2);
+
+  const bar = (ourVal, oppVal, label) => {
+    const total = ourVal + oppVal || 1;
+    const ourW  = Math.round(ourVal/total*100);
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-family:var(--font-cond);font-size:16px;font-weight:700;color:var(--accent)">${ourVal}</span>
+        <span style="font-size:12px;color:var(--text2)">${label}</span>
+        <span style="font-family:var(--font-cond);font-size:16px;font-weight:700;color:var(--text)">${oppVal}</span>
+      </div>
+      <div style="height:6px;border-radius:3px;background:var(--surface2);overflow:hidden">
+        <div style="height:100%;width:${ourW}%;background:var(--accent);border-radius:3px;transition:width 0.3s"></div>
+      </div>
+    </div>`;
+  };
+
+  const circle = (pct, label, color) => {
+    const num = parseInt(pct) || 0;
+    const r = 36; const circ = 2*Math.PI*r;
+    const dash = circ * num / 100;
+    return `<div style="text-align:center;flex:1">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="10"/>
+        <circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="10"
+          stroke-dasharray="${dash} ${circ}" stroke-dashoffset="${circ/4}" stroke-linecap="round"
+          transform="rotate(-90 50 50)"/>
+        <text x="50" y="50" text-anchor="middle" dominant-baseline="central"
+          style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;fill:${color}">${pct}</text>
+      </svg>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px">${label}</div>
+    </div>`;
+  };
+
+  const thStyle = `style="padding:6px 8px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;text-align:center;background:var(--surface);border-bottom:1px solid var(--border)"`;
+  const tdStyle = `style="padding:7px 8px;font-size:12px;text-align:center;border-bottom:1px solid var(--border)"`;
+  const tdBold  = `style="padding:7px 8px;font-size:12px;text-align:center;border-bottom:1px solid var(--border);font-weight:700"`;
+  const trTotal = `style="background:var(--surface2)"`;
+
+  const fieldTable = (d, label) => `
+    <tr>
+      <td style="padding:7px 8px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap">${label}</td>
+      <td ${tdStyle}>${d.goals}</td>
+      <td ${tdStyle}>${d.shots - d.goals}</td>
+      <td ${tdStyle}>${d.pctShots}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.g7m, d.g7m+d.f7m)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.g6m, d.g6m+d.f6m)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gPen, d.gPen+d.fPen)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gPnt, d.gPnt+d.fPnt)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.g9m, d.g9m+d.f9m)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gCA, d.gCA+d.fCA)}</td>
+    </tr>`;
+
+  const gkTable = (d, label) => `
+    <tr>
+      <td style="padding:7px 8px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap">${label}</td>
+      <td ${tdStyle}>${d.gkSaves}</td>
+      <td ${tdStyle}>${d.gkSaves+d.gkConceded}</td>
+      <td ${tdStyle}>${d.pctDef}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gkS7m, d.gkS7m+d.gkC7m)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gkS6m, d.gkS6m+d.gkC6m)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gkSPen, d.gkSPen+d.gkCPen)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gkSPnt, d.gkSPnt+d.gkCPnt)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gkS9m, d.gkS9m+d.gkC9m)}</td>
+      <td ${tdStyle}>${d.fmtRatio(d.gkSCA, d.gkSCA+d.gkCCA)}</td>
+    </tr>`;
+
+  const tableWrap = (content) => `<div style="overflow-x:auto;margin-bottom:20px"><table style="width:100%;border-collapse:collapse;background:var(--surface);border-radius:6px;overflow:hidden">${content}</table></div>`;
+
+  const fieldHead = `<thead><tr>
+    <th ${thStyle} style="text-align:left;padding:6px 8px;font-size:10px;font-weight:700;color:var(--text3)"></th>
+    <th ${thStyle}>G</th><th ${thStyle}>Falhas</th><th ${thStyle}>%R</th>
+    <th ${thStyle}>7m</th><th ${thStyle}>6m</th><th ${thStyle}>Pen</th>
+    <th ${thStyle}>Ponta</th><th ${thStyle}>9m</th><th ${thStyle}>CA</th>
+  </tr></thead>`;
+
+  const gkHead = `<thead><tr>
+    <th ${thStyle} style="text-align:left;padding:6px 8px;font-size:10px;font-weight:700;color:var(--text3)"></th>
+    <th ${thStyle}>Def</th><th ${thStyle}>Rem</th><th ${thStyle}>%D</th>
+    <th ${thStyle}>7m</th><th ${thStyle}>6m</th><th ${thStyle}>Pen</th>
+    <th ${thStyle}>Ponta</th><th ${thStyle}>9m</th><th ${thStyle}>CA</th>
+  </tr></thead>`;
+
+  document.getElementById('md-tab-jogo').innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+      <span style="font-family:var(--font-cond);font-size:14px;font-weight:700;color:var(--accent)">● ${myShort}</span>
+      <span style="font-family:var(--font-cond);font-size:14px;font-weight:700;color:var(--text)">${oppName} ●</span>
+    </div>
+    ${bar(t.shots, 0, 'Remates')}
+    ${bar(t.goals, oppGoals, 'Golos')}
+    ${bar(t.g7m, 0, 'Golos 7m')}
+    ${bar(t.gCA, 0, 'Golos Contra-Ataque')}
+    <div style="display:flex;gap:12px;justify-content:center;margin:20px 0">
+      ${circle(t.pctDef,   'Percentagem Defesas', 'var(--success)')}
+      ${circle(t.pctShots, 'Percentagem Remates', 'var(--accent)')}
+    </div>
+
+    <div style="font-family:var(--font-cond);font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:10px;color:var(--text2)">Jogadores de Campo</div>
+    ${tableWrap(fieldHead + '<tbody>' + fieldTable(p1,'1ª Parte') + fieldTable(p2,'2ª Parte') + `<tr ${trTotal}><td style="padding:7px 8px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border)">Total</td>
+      <td ${tdBold}>${t.goals}</td><td ${tdStyle}>${t.shots-t.goals}</td><td ${tdStyle}>${t.pctShots}</td>
+      <td ${tdStyle}>${t.fmtRatio(t.g7m,t.g7m+t.f7m)}</td><td ${tdStyle}>${t.fmtRatio(t.g6m,t.g6m+t.f6m)}</td>
+      <td ${tdStyle}>${t.fmtRatio(t.gPen,t.gPen+t.fPen)}</td><td ${tdStyle}>${t.fmtRatio(t.gPnt,t.gPnt+t.fPnt)}</td>
+      <td ${tdStyle}>${t.fmtRatio(t.g9m,t.g9m+t.f9m)}</td><td ${tdStyle}>${t.fmtRatio(t.gCA,t.gCA+t.fCA)}</td>
+    </tr></tbody>`)}
+
+    <div style="font-family:var(--font-cond);font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:10px;color:var(--text2)">Guarda-Redes</div>
+    ${tableWrap(gkHead + '<tbody>' + gkTable(p1,'1ª Parte') + gkTable(p2,'2ª Parte') + `<tr ${trTotal}><td style="padding:7px 8px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border)">Total</td>
+      <td ${tdBold}>${t.gkSaves}</td><td ${tdStyle}>${t.gkSaves+t.gkConceded}</td><td ${tdStyle}>${t.pctDef}</td>
+      <td ${tdStyle}>${t.fmtRatio(t.gkS7m,t.gkS7m+t.gkC7m)}</td><td ${tdStyle}>${t.fmtRatio(t.gkS6m,t.gkS6m+t.gkC6m)}</td>
+      <td ${tdStyle}>${t.fmtRatio(t.gkSPen,t.gkSPen+t.gkCPen)}</td><td ${tdStyle}>${t.fmtRatio(t.gkSPnt,t.gkSPnt+t.gkCPnt)}</td>
+      <td ${tdStyle}>${t.fmtRatio(t.gkS9m,t.gkS9m+t.gkC9m)}</td><td ${tdStyle}>${t.fmtRatio(t.gkSCA,t.gkSCA+t.gkCCA)}</td>
+    </tr></tbody>`)}`;
+}
+
+// ── TAB: RESULTADO ─────────────────────────
+
+function renderResultado() {
+  const events = (_match.stats.events || []).slice().reverse();
+  if (!events.length) {
+    document.getElementById('md-tab-resultado').innerHTML = emptyState('📋', 'Sem eventos registados.');
+    return;
+  }
+  const fmtTime = (secs, period) => {
+    const m = Math.floor(secs/60); const s = secs%60;
+    return `${period}ª ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  };
+  const action = [...ACTIONS_FIELD, ...ACTIONS_GK].reduce((acc, a) => { acc[a.key] = a.label; return acc; }, {});
+  document.getElementById('md-tab-resultado').innerHTML = events.map(e => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:3px">
+      <div style="font-size:10px;color:var(--text3);white-space:nowrap;min-width:60px">${fmtTime(e.t, e.period)}</div>
+      <div style="width:26px;height:26px;border-radius:4px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-family:var(--font-cond);font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0">${e.shirt||'—'}</div>
+      <div style="flex:1">
+        <div style="font-family:var(--font-cond);font-size:13px;font-weight:600">${esc(e.playerName)}</div>
+        <div style="font-size:11px;color:var(--text2)">${action[e.action] || e.action}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Placard + Timer ─────────────────────────
 
 function updateScoreboard() {
   document.getElementById('md-score-our').textContent = _match.stats.scoreOur;
   document.getElementById('md-score-opp').textContent = _match.stats.scoreOpp;
 }
 
-// ── Timer ──────────────────────────────────
-
 function updateTimerDisplay() {
   const secs = _match.stats.timerSecs;
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
+  const m = Math.floor(secs/60); const s = secs%60;
   document.getElementById('md-timer').textContent =
     `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   document.getElementById('md-period-label').textContent =
     _match.stats.period === 1 ? '1ª PARTE' : '2ª PARTE';
-}
-
-export function adjustTimer() {
-  if (!_match) return;
-  const cur = _match.stats.timerSecs;
-  document.getElementById('timer-min').value = Math.floor(cur / 60);
-  document.getElementById('timer-sec').value = cur % 60;
-  document.getElementById('modal-timer').classList.add('open');
-}
-
-export function confirmAdjustTimer() {
-  const min = Math.min(parseInt(document.getElementById('timer-min').value) || 0, 30);
-  const sec = Math.min(parseInt(document.getElementById('timer-sec').value) || 0, 59);
-  _match.stats.timerSecs = min * 60 + sec;
-  updateTimerDisplay();
-  DB.matches.put(_match);
-  document.getElementById('modal-timer').classList.remove('open');
-  toast('Tempo ajustado', 'success');
 }
 
 function updateTimerButtons() {
@@ -333,41 +711,52 @@ export function matchTimerStart() {
   _match.status = 'a_decorrer';
   document.getElementById('md-status').value = 'a_decorrer';
   _timerInterval = setInterval(() => {
-    if (_match.stats.timerSecs < 30 * 60) {
+    if (_match.stats.timerSecs < 30*60) {
       _match.stats.timerSecs++;
       updateTimerDisplay();
       if (_match.stats.timerSecs % 30 === 0) DB.matches.put(_match);
     } else {
-      timerStop();
-      updateTimerButtons();
-      if (_match.stats.period === 1) {
-        toast('Fim da 1ª parte!', 'success');
-      } else {
-        toast('Fim do jogo!', 'success');
-        _match.status = 'finalizado';
-        document.getElementById('md-status').value = 'finalizado';
-      }
+      timerStop(); updateTimerButtons();
+      if (_match.stats.period === 1) toast('Fim da 1ª parte!', 'success');
+      else { toast('Fim do jogo!', 'success'); _match.status = 'finalizado'; document.getElementById('md-status').value = 'finalizado'; }
       DB.matches.put(_match);
     }
   }, 1000);
 }
 
 export function matchTimerPause() {
-  timerStop();
-  updateTimerButtons();
-  DB.matches.put(_match);
+  timerStop(); updateTimerButtons(); DB.matches.put(_match);
 }
 
 export function matchTimerHalf() {
   timerStop();
   _match.stats.period = 2;
   _match.stats.timerSecs = 0;
-  updateTimerDisplay();
-  updateTimerButtons();
+  updateTimerDisplay(); updateTimerButtons();
   DB.matches.put(_match);
   toast('Intervalo — 2ª parte pronta a iniciar', 'success');
 }
 
-export function openMatchEvents(id) {
-  openMatchDetail(id);
+export function adjustTimer() {
+  if (!_match) return;
+  document.getElementById('timer-min').value = Math.floor(_match.stats.timerSecs/60);
+  document.getElementById('timer-sec').value = _match.stats.timerSecs % 60;
+  document.getElementById('modal-timer').classList.add('open');
 }
+
+export function confirmAdjustTimer() {
+  const min = Math.min(parseInt(document.getElementById('timer-min').value)||0, 30);
+  const sec = Math.min(parseInt(document.getElementById('timer-sec').value)||0, 59);
+  _match.stats.timerSecs = min*60+sec;
+  updateTimerDisplay();
+  DB.matches.put(_match);
+  document.getElementById('modal-timer').classList.remove('open');
+  toast('Tempo ajustado', 'success');
+}
+
+export function openMatchEvents(id) { openMatchDetail(id); }
+
+// Compat
+export function addGoal(id)    { registerAction(id, 'golo_9m'); }
+export function addSave(id)    { registerAction(id, 'defesa_9m'); }
+export function addConceded(id){ registerAction(id, 'sofreu_9m'); }
