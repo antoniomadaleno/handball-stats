@@ -9,11 +9,12 @@ import { esc, toast, closeModal, fmtDatetime, emptyState } from './utils.js';
 // ── Estado ─────────────────────────────────
 let _match = null;
 let _players = [];       // jogadores convocados (objetos completos)
+let _oppPlayers = [];    // jogadores do adversário
 let _timerInterval = null;
 let _timerRunning = false;
 let _activeTab = 'entrada';
 let _selectedPlayerId = null;
-let _pendingAction = null; // { playerId, actionKey, fieldX, fieldY, goalX, goalY }
+let _pendingAction = null; // { playerId, actionKey, fieldX, fieldY, goalX, goalY, oppPlayerId }
 
 // ── Ações disponíveis ──────────────────────
 const ACTIONS_FIELD = [
@@ -157,6 +158,7 @@ export function openMatchDetail(id) {
     const m   = matches.find(x => x.id === id);
     const opp = opps.find(x => x.id === m.opponent_id) || { name: '?', short_name: '?' };
     _match = m;
+    _oppPlayers = Array.isArray(opp.players) ? opp.players : [];
 
     const info    = S.season.info || {};
     const myShort = info.teamShort || 'NÓS';
@@ -204,6 +206,7 @@ export function closeMatchDetail() {
   timerStop();
   _match = null;
   _players = [];
+  _oppPlayers = [];
   _selectedPlayerId = null;
   if(window.app) window.app.showSec('matches');
 }
@@ -259,6 +262,7 @@ export function switchTab(tab) {
   if (tab === 'jogadores') renderJogadores();
   if (tab === 'jogo')      renderJogo();
   if (tab === 'resultado') renderResultado();
+  if (tab === 'mapas')     { _hmFilter = 'all'; _hmGkFilter = 'all'; renderJogoHeatmaps(); }
 }
 
 // ── TAB: ENTRADA ───────────────────────────
@@ -309,7 +313,7 @@ export function registerAction(playerId, actionKey) {
   const action = [...ACTIONS_FIELD, ...ACTIONS_GK].find(a => a.key === actionKey);
   const needsLocation = action && (action.goal || action.save || action.conc || actionKey.startsWith('falha_'));
   if (needsLocation) {
-    _pendingAction = { playerId, actionKey };
+    _pendingAction = { playerId, actionKey, oppPlayerId: null };
     openLocationModal(actionKey, action);
     return;
   }
@@ -317,15 +321,33 @@ export function registerAction(playerId, actionKey) {
 }
 
 function openLocationModal(actionKey, action) {
-  const isGoalOrSave = action && (action.goal || action.save || action.conc);
+  const isGoalOrSave = action && (action.goal || action.save || action.conc || (actionKey && actionKey.startsWith('falha_')));
+  const needsOpp     = action && (action.save || action.conc); // defesas e golos sofridos
   document.getElementById('loc-field-dot').style.display = 'none';
   document.getElementById('loc-goal-dot').style.display  = 'none';
   document.getElementById('loc-action-label').textContent = action ? action.label : actionKey;
-  // Mostra/esconde secção da baliza
   const goalSection = document.getElementById('loc-goal-section');
   if (goalSection) goalSection.style.display = isGoalOrSave ? '' : 'none';
+  // Seletor adversário
+  const oppSection = document.getElementById('loc-opp-section');
+  if (oppSection) {
+    if (needsOpp && _oppPlayers.length) {
+      oppSection.style.display = '';
+      const sorted = _oppPlayers.slice().sort((a,b) => (a.shirt||99)-(b.shirt||99));
+      document.getElementById('loc-opp-list').innerHTML = sorted.map(p =>
+        `<button class="loc-opp-btn" data-pid="${p._id}"
+          onclick="app.locSelectOppPlayer('${p._id}')"
+          style="padding:5px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-cond);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
+          <span style="color:var(--accent)">${p.shirt||'?'}</span> ${esc(p.name.split(' ')[0])}
+        </button>`
+      ).join('');
+    } else {
+      oppSection.style.display = 'none';
+    }
+  }
   _pendingAction.fieldX = null; _pendingAction.fieldY = null;
   _pendingAction.goalX  = null; _pendingAction.goalY  = null;
+  _pendingAction.oppPlayerId = null;
   document.getElementById('modal-location').classList.add('open');
 }
 
@@ -359,9 +381,9 @@ export function locNextStep() {
 export function locConfirm() {
   if (!_pendingAction) return;
   document.getElementById('modal-location').classList.remove('open');
-  const { playerId, actionKey, fieldX, fieldY, goalX, goalY } = _pendingAction;
+  const { playerId, actionKey, fieldX, fieldY, goalX, goalY, oppPlayerId } = _pendingAction;
   _pendingAction = null;
-  commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY);
+  commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY, oppPlayerId);
 }
 
 export function locSkip() {
@@ -369,10 +391,10 @@ export function locSkip() {
   document.getElementById('modal-location').classList.remove('open');
   const { playerId, actionKey } = _pendingAction;
   _pendingAction = null;
-  commitAction(playerId, actionKey, null, null, null, null);
+  commitAction(playerId, actionKey, null, null, null, null, null);
 }
 
-function commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY) {
+function commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY, oppPlayerId) {
   if (!_match) return;
   const p = _players.find(x => x.id === playerId);
   if (!p) return;
@@ -398,6 +420,7 @@ function commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY) {
     playerId, action: actionKey,
     playerName: p.name, shirt: p.shirt,
     fieldX, fieldY, goalX, goalY,
+    oppPlayerId: oppPlayerId || null,
   });
 
   DB.matches.put(_match).then(() => {
@@ -755,6 +778,125 @@ export function confirmAdjustTimer() {
 }
 
 export function openMatchEvents(id) { openMatchDetail(id); }
+// ── Mapa de calor ──────────────────────────
+
+const GOAL_SVG = `<svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;border-radius:4px">
+  <rect x="0" y="0" width="500" height="200" fill="#0a0a18"/>
+  <rect x="90" y="20" width="320" height="140" fill="#111128"/>
+  <line x1="197" y1="20" x2="197" y2="160" stroke="#222245" stroke-width="2"/>
+  <line x1="303" y1="20" x2="303" y2="160" stroke="#222245" stroke-width="2"/>
+  <line x1="90"  y1="67" x2="410" y2="67"  stroke="#222245" stroke-width="2"/>
+  <line x1="90"  y1="113" x2="410" y2="113" stroke="#222245" stroke-width="2"/>
+  <rect x="85" y="16" width="8" height="148" fill="#4a9a6a" rx="2"/>
+  <rect x="407" y="16" width="8" height="148" fill="#4a9a6a" rx="2"/>
+  <rect x="85" y="16" width="330" height="8" fill="#4a9a6a" rx="2"/>
+</svg>`;
+
+const FIELD_IMG = `<img src="pictures/handball_court.png" style="width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;background:#000;border-radius:4px" />`;
+
+function isGoalAction(action) {
+  return action && (action.startsWith('golo_') || action.startsWith('sofreu_'));
+}
+
+export function renderHeatmap(containerId, events, type) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const filtered = events.filter(e =>
+    type === 'field' ? (e.fieldX != null) : (e.goalX != null)
+  );
+  if (!filtered.length) {
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px">Sem dados</div>`;
+    return;
+  }
+  const bg = type === 'field' ? FIELD_IMG : GOAL_SVG;
+  const dots = filtered.map(e => {
+    const x = type === 'field' ? e.fieldX : e.goalX;
+    const y = type === 'field' ? e.fieldY : e.goalY;
+    // Verde = golo marcado, Vermelho = falha/golo sofrido, Amarelo = defesa
+    let color;
+    if (e.action.startsWith('golo_'))   color = 'rgba(74,222,128,0.9)';   // verde
+    else if (e.action.startsWith('sofreu_')) color = 'rgba(239,68,68,0.9)'; // vermelho
+    else if (e.action.startsWith('defesa_')) color = 'rgba(74,222,128,0.9)'; // verde (defesa = bom)
+    else color = 'rgba(239,68,68,0.9)'; // vermelho (falha)
+    const label = e.shirt ? `<span style="font-size:8px;font-weight:700;color:white;line-height:1">${e.shirt}</span>` : '';
+    return `<div style="position:absolute;width:18px;height:18px;border-radius:50%;background:${color};border:1.5px solid rgba(255,255,255,0.7);box-shadow:0 0 6px rgba(0,0,0,0.5);transform:translate(-50%,-50%);left:${x}%;top:${y}%;display:flex;align-items:center;justify-content:center;pointer-events:none">${label}</div>`;
+  }).join('');
+  el.innerHTML = `<div style="position:relative;width:100%;height:100%">${bg}<div style="position:absolute;inset:0">${dots}</div></div>`;
+}
+
+let _hmFilter = 'all';   // 'all' ou player id (jogadores de campo)
+let _hmGkFilter = 'all'; // 'all' ou player id (guarda-redes)
+
+export function hmSetFilter(val) {
+  _hmFilter = val;
+  renderJogoHeatmaps();
+}
+
+export function hmSetGkFilter(val) {
+  _hmGkFilter = val;
+  renderJogoHeatmaps();
+}
+
+export function renderJogoHeatmaps() {
+  const allEvents = _match.stats.events || [];
+
+  // Jogadores para o filtro
+  const ourPlayers = _players.filter(p => p.position !== 'GR');
+  const gks        = _players.filter(p => p.position === 'GR');
+
+  // Render filtro
+  const filterEl = document.getElementById('hm-filter');
+  if (filterEl) {
+    const opts = [{ id: 'all', label: 'Todos' }, ...ourPlayers.map(p => ({ id: p.id, label: `${p.shirt||'?'} ${p.name.split(' ')[0]}` }))];
+    filterEl.innerHTML = opts.map(o =>
+      `<button onclick="app.hmSetFilter('${o.id}')"
+        style="padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:${_hmFilter == o.id ? 'var(--accent)' : 'var(--surface2)'};color:${_hmFilter == o.id ? '#0d0f14' : 'var(--text)'};font-family:var(--font-cond);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">${esc(o.label)}</button>`
+    ).join('');
+  }
+  const gkFilterEl = document.getElementById('hm-gk-filter');
+  if (gkFilterEl) {
+    const gkOpts = [{ id: 'all', label: 'Todos GR' }, ...gks.map(p => ({ id: p.id, label: `${p.shirt||'?'} ${p.name.split(' ')[0]}` }))];
+    gkFilterEl.innerHTML = gkOpts.map(o =>
+      `<button onclick="app.hmSetGkFilter('${o.id}')"
+        style="padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:${_hmGkFilter == o.id ? 'var(--accent)' : 'var(--surface2)'};color:${_hmGkFilter == o.id ? '#0d0f14' : 'var(--text)'};font-family:var(--font-cond);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">${esc(o.label)}</button>`
+    ).join('');
+  }
+
+  // Filtra eventos
+  const filterFn    = e => _hmFilter    === 'all' || String(e.playerId) === String(_hmFilter);
+  const filterGkFn  = e => _hmGkFilter  === 'all' || String(e.playerId) === String(_hmGkFilter);
+
+  // Nossa equipa: golos + falhas (tudo exceto sofreu_ e defesa_)
+  const ourShots  = allEvents.filter(e => filterFn(e) && e.fieldX != null && !e.action.startsWith('sofreu_') && !e.action.startsWith('defesa_'));
+  const ourGoals  = allEvents.filter(e => filterFn(e) && e.goalX  != null && !e.action.startsWith('sofreu_') && !e.action.startsWith('defesa_'));
+  // Adversário: remates sofridos e defesas, filtrado por GR
+  const oppShots  = allEvents.filter(e => filterGkFn(e) && e.fieldX != null && (e.action.startsWith('sofreu_') || e.action.startsWith('defesa_')));
+  const oppGoals  = allEvents.filter(e => filterGkFn(e) && e.goalX  != null && (e.action.startsWith('sofreu_') || e.action.startsWith('defesa_')));
+
+  renderHeatmap('hm-field-our', ourShots, 'field');
+  renderHeatmap('hm-goal-our',  ourGoals, 'goal');
+  renderHeatmap('hm-field-opp', oppShots, 'field');
+  renderHeatmap('hm-goal-opp',  oppGoals, 'goal');
+}
+
+
+export function locSelectOppPlayer(pid) {
+  if (!_pendingAction) return;
+  // Toggle selection
+  _pendingAction.oppPlayerId = _pendingAction.oppPlayerId === pid ? null : pid;
+  // Update UI
+  document.querySelectorAll('.loc-opp-btn').forEach(b => {
+    b.style.background = b.dataset.pid === String(pid) && _pendingAction.oppPlayerId === pid
+      ? 'var(--accent)' : 'var(--surface2)';
+    b.style.color = b.dataset.pid === String(pid) && _pendingAction.oppPlayerId === pid
+      ? '#0d0f14' : 'var(--text)';
+  });
+}
+
+export function locGetOppPlayers() {
+  return _oppPlayers;
+}
+
 
 // Compat
 export function addGoal(id)    { registerAction(id, 'golo_9m'); }

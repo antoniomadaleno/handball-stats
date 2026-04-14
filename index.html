@@ -296,6 +296,7 @@
             <button class="md-tab"        data-tab="jogadores" onclick="app.switchTab('jogadores')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Jogadores</button>
             <button class="md-tab"        data-tab="jogo"      onclick="app.switchTab('jogo')"      style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Jogo</button>
             <button class="md-tab"        data-tab="resultado" onclick="app.switchTab('resultado')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Resultado</button>
+            <button class="md-tab"        data-tab="mapas"     onclick="app.switchTab('mapas')"     style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Mapas</button>
           </div>
           <div class="md-tab-content" data-tab="entrada">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;height:calc(100vh - 420px);min-height:300px">
@@ -306,6 +307,47 @@
           <div class="md-tab-content" data-tab="jogadores" style="display:none;overflow-x:auto"><div id="md-tab-jogadores"></div></div>
           <div class="md-tab-content" data-tab="jogo"      style="display:none"><div id="md-tab-jogo"></div></div>
           <div class="md-tab-content" data-tab="resultado" style="display:none"><div id="md-tab-resultado"></div></div>
+          <div class="md-tab-content" data-tab="mapas" style="display:none">
+            <!-- Legenda + Filtro jogador -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#4ade80"></div><span style="font-size:11px;color:var(--text2)">Golo / Defesa</span></div>
+                <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#ef4444"></div><span style="font-size:11px;color:var(--text2)">Falha / Sofrido</span></div>
+              </div>
+            </div>
+            <!-- Filtro por jogador -->
+            <div style="margin-bottom:12px">
+              <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:5px">Filtrar por jogador</div>
+              <div id="hm-filter" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+            </div>
+            <!-- Nossa equipa -->
+            <div style="font-family:var(--font-cond);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Nossa equipa — Remates</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Campo</div>
+                <div id="hm-field-our" style="height:160px;border-radius:4px;overflow:hidden;background:#000"></div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Baliza</div>
+                <div id="hm-goal-our" style="height:160px;border-radius:4px;overflow:hidden;background:#0a0a18"></div>
+              </div>
+            </div>
+            <!-- Adversário -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+              <div style="font-family:var(--font-cond);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--text2)">Adversário — Remates sofridos</div>
+              <div id="hm-gk-filter" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Campo</div>
+                <div id="hm-field-opp" style="height:160px;border-radius:4px;overflow:hidden;background:#000"></div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Baliza</div>
+                <div id="hm-goal-opp" style="height:160px;border-radius:4px;overflow:hidden;background:#0a0a18"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -434,6 +476,12 @@
       <button onclick="app.locSkip()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:2px 8px;line-height:1">✕</button>
       <div style="font-family:var(--font-cond);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px" id="loc-action-label"></div>
       <button onclick="app.locConfirm()" style="background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:2px 8px;line-height:1">✓</button>
+    </div>
+
+    <!-- Seletor jogador adversário (só para defesas/golos sofridos) -->
+    <div id="loc-opp-section" style="display:none;flex-shrink:0;padding:6px 16px 0">
+      <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Quem rematou? <span style="font-weight:400;color:var(--text3)">(opcional)</span></div>
+      <div id="loc-opp-list" style="display:flex;gap:5px;flex-wrap:wrap;overflow-y:auto;max-height:64px"></div>
     </div>
 
     <!-- Baliza — altura maior -->
