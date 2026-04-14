@@ -82,7 +82,11 @@ export function renderInfoView(season) {
   // Taças
   const cups = i.cups || [];
   const cupsHtml = cups.length
-    ? cups.map((c, idx) => row(c.type || `Taça ${idx + 1}`, c.name)).filter(Boolean).join('')
+    ? cups.map((c, idx) => {
+        const label = `Taça / Competição${cups.length > 1 ? ' ' + (idx + 1) : ''}`;
+        const val = c.type + (c.name ? ' · ' + c.name : '');
+        return row(label, val);
+      }).filter(Boolean).join('')
     : '';
 
   const competitionBlock = (leaguesHtml || cupsHtml)
@@ -128,13 +132,13 @@ export function saveInfo() {
     delegate:   document.getElementById('i-delegate').value.trim(),
   };
   DB.seasons.put(S.season).then(() => {
-    renderInfoView(S.season);
+    try { renderInfoView(S.season); } catch(e) { console.error('renderInfoView error:', e); }
     setInfoMode('view');
     renderBadge('sb-badge', S.season.info);
     document.getElementById('sb-team-name').textContent = S.season.info.teamName || '';
     if(window.app) window.app.renderSeasons();
     toast('Informações guardadas', 'success');
-  });
+  }).catch(e => { console.error('saveInfo DB error:', e); toast('Erro ao guardar', 'error'); });
 }
 
 // ── Campeonatos ────────────────────────────
