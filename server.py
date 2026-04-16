@@ -2,7 +2,7 @@
 """
 Servidor de desenvolvimento — Handball Stats
 Corre com: python3 serve.py
-Abre no browser: http://localhost:8000
+Abre no browser: http://localhost:8080
 Hot-reload automático quando ficheiros mudam.
 """
 
@@ -18,7 +18,6 @@ from pathlib import Path
 PORT = 8080
 DIR  = Path(__file__).parent.resolve()
 
-# ── Hot-reload via Server-Sent Events ──────
 _clients = []
 _clients_lock = threading.Lock()
 
@@ -34,11 +33,8 @@ def notify_reload():
             _clients.remove(q)
 
 def watch_files():
-    """Observa alterações em .html, .css, .js e notifica clientes."""
     import queue
-    watched = {}
     exts = {'.html', '.css', '.js'}
-
     def get_mtimes():
         mtimes = {}
         for path in DIR.rglob('*'):
@@ -48,7 +44,6 @@ def watch_files():
                 except:
                     pass
         return mtimes
-
     watched = get_mtimes()
     while True:
         time.sleep(0.5)
@@ -62,7 +57,6 @@ def watch_files():
             notify_reload()
         watched = current
 
-
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(DIR), **kwargs)
@@ -74,7 +68,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
-        # Endpoint SSE para hot-reload
         if self.path == '/__reload__':
             import queue
             q = queue.Queue()
@@ -92,7 +85,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         self.wfile.write(b'data: reload\n\n')
                         self.wfile.flush()
                     except queue.Empty:
-                        # Keepalive ping
                         self.wfile.write(b': ping\n\n')
                         self.wfile.flush()
             except Exception:
@@ -110,27 +102,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         print(f"  {args[0]} {args[1]}")
 
-
 def inject_reload_script(html):
-    """Injeta o script de hot-reload no HTML antes de </body>."""
     script = b'''<script>
 (function(){
   var es = new EventSource('/__reload__');
   es.onmessage = function(e){
-    if(e.data === 'reload') {
-      console.log('[dev] reload');
-      location.reload();
-    }
+    if(e.data === 'reload') { console.log('[dev] reload'); location.reload(); }
   };
-  es.onerror = function(){
-    setTimeout(function(){ location.reload(); }, 1000);
-  };
+  es.onerror = function(){ setTimeout(function(){ location.reload(); }, 1000); };
 })();
 </script>'''
     return html.replace(b'</body>', script + b'</body>')
 
-
-# Patch para injetar script no HTML
 _orig_copyfile = http.server.SimpleHTTPRequestHandler.copyfile
 
 def patched_copyfile(self, source, outputfile):
@@ -138,18 +121,15 @@ def patched_copyfile(self, source, outputfile):
         content = source.read()
         if b'</body>' in content:
             content = inject_reload_script(content)
-        import io
         outputfile.write(content)
     else:
         _orig_copyfile(self, source, outputfile)
 
 Handler.copyfile = patched_copyfile
 
-
 def open_browser():
     time.sleep(0.6)
     webbrowser.open(f'http://localhost:{PORT}')
-
 
 if __name__ == '__main__':
     os.chdir(DIR)
@@ -157,10 +137,8 @@ if __name__ == '__main__':
     print(f"  URL:      http://localhost:{PORT}")
     print(f"  Reload:   automático ao guardar ficheiros")
     print(f"  Stop:     Ctrl+C\n")
-
     threading.Thread(target=watch_files, daemon=True).start()
     threading.Thread(target=open_browser, daemon=True).start()
-
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(('', PORT), Handler) as httpd:
         try:

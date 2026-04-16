@@ -6,11 +6,18 @@ import { openDB } from './db.js';
 import { S } from './state.js';
 import { goHome, openSeason, showSec, setBreadcrumb } from './nav.js';
 import { renderSeasons, createSeason, quickToggleEnded, toggleSeasonEnded, deleteSeason, getSeasonById } from './seasons.js';
-import { fillInfoForm, setInfoMode, saveInfo, renderPavilions, addPavilion, removePavilion } from './info.js';
+import { fillInfoForm, setInfoMode, saveInfo, addPavilion, removePavilion, addLeague, removeLeague, addCup, removeCup } from './info.js';
 import { uploadOwnBadge, removeOwnBadge } from './badge.js';
 import { renderPlayers, openPlayerProfile, openEditCurrentPlayer, deleteCurrentPlayer, openAddPlayer, openEditPlayer, savePlayer, deletePlayer } from './players.js';
 import { renderOpponents, openAddOpponent, openEditOpponent, saveOpponent, openOpponentProfile, saveOpponentAnalysis, openEditCurrentOpponent, deleteCurrentOpponent, openAddOppPlayer, openEditOppPlayer, saveOppPlayer, openOppPlayerProfile, saveOppPlayerNotes, deleteCurrentOppPlayer } from './opponents.js';
-import { renderMatches, openAddMatch, openEditMatch, saveMatch, deleteMatch, openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad, switchTab, selectPlayer, registerAction, locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, renderJogoHeatmaps, hmSetFilter, hmSetGkFilter, matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer, openMatchEvents } from './matches.js';
+import {
+  renderMatches, openAddMatch, openEditMatch, saveMatch, deleteMatch,
+  openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad, openMatchEvents,
+  switchTab, selectPlayer,
+  registerAction, locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, locSelectOurGk,
+  matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer,
+  renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter,
+} from './matches/matches.js';
 import { closeModal } from './utils.js';
 
 // ── openSeasonById — lookup seguro sem JSON no onclick ──
@@ -20,16 +27,15 @@ function openSeasonById(id) {
 }
 
 // ── Objeto público da aplicação ────────────
-// Exportado e atribuído a window._appReady pelo index.html
 export const app = {
   // nav
   goHome, openSeason, openSeasonById, showSec,
-  // render (used by nav.js via window.app)
+  // render (usados por nav.js via window.app)
   renderSeasons, fillInfoForm, renderPlayers, renderOpponents, renderMatches,
   // seasons
   createSeason, quickToggleEnded, toggleSeasonEnded, deleteSeason,
   // info
-  setInfoMode, saveInfo, addPavilion, removePavilion,
+  setInfoMode, saveInfo, addPavilion, removePavilion, addLeague, removeLeague, addCup, removeCup,
   // badge
   uploadOwnBadge, removeOwnBadge,
   // players
@@ -45,7 +51,8 @@ export const app = {
   openAddMatch, openEditMatch, saveMatch, deleteMatch, openMatchEvents,
   openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad,
   switchTab, selectPlayer, registerAction,
-  locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, renderJogoHeatmaps, hmSetFilter, hmSetGkFilter,
+  locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, locSelectOurGk,
+  renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter,
   matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer,
   // utils
   closeModal,

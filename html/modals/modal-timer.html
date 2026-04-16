@@ -1,0 +1,21 @@
+<!-- Modal: Ajustar tempo -->
+<div class="modal-backdrop" id="modal-timer">
+  <div class="modal" style="max-width:320px">
+    <div class="modal-title">Ajustar tempo</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0">
+      <div style="text-align:center">
+        <label style="display:block;margin-bottom:6px">Minutos</label>
+        <input type="number" id="timer-min" min="0" max="30" style="width:80px;font-size:28px;font-family:var(--font-cond);font-weight:700;text-align:center;padding:10px" />
+      </div>
+      <div style="font-family:var(--font-cond);font-size:32px;font-weight:700;padding-top:20px">:</div>
+      <div style="text-align:center">
+        <label style="display:block;margin-bottom:6px">Segundos</label>
+        <input type="number" id="timer-sec" min="0" max="59" style="width:80px;font-size:28px;font-family:var(--font-cond);font-weight:700;text-align:center;padding:10px" />
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-timer')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.confirmAdjustTimer()">Confirmar</button>
+    </div>
+  </div>
+</div>

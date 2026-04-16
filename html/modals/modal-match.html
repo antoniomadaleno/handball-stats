@@ -1,0 +1,29 @@
+<!-- Modal: Jogo -->
+<div class="modal-backdrop" id="modal-match">
+  <div class="modal">
+    <div class="modal-title" id="modal-match-title">Criar jogo</div>
+    <input type="hidden" id="mm-id" />
+    <div class="grid g2" style="margin-bottom:0">
+      <div class="field"><label>Tipo</label>
+        <select id="mm-type">
+          <option value="proprio">Jogo próprio</option>
+          <option value="scout">Scout (adversário)</option>
+        </select>
+      </div>
+      <div class="field"><label>Adversário</label><select id="mm-opponent"></select></div>
+      <div class="field"><label>Casa / Fora</label>
+        <select id="mm-home">
+          <option value="home">Casa</option>
+          <option value="away">Fora</option>
+        </select>
+      </div>
+      <div class="field"><label>Competição</label><input type="text"           id="mm-competition" placeholder="ex: Campeonato" /></div>
+      <div class="field"><label>Data e hora</label><input type="datetime-local" id="mm-datetime" /></div>
+      <div class="field"><label>Local</label>      <input type="text"           id="mm-venue"       placeholder="ex: Pavilhão Municipal" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-match')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.saveMatch()">Guardar</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,135 @@
+<!-- JOGOS -->
+<div id="sec-matches" class="sec">
+  <div class="sec-header">
+    <div><div class="sec-title">Jogos</div><div class="sec-sub" id="matches-count">—</div></div>
+    <button class="btn btn-primary" onclick="app.openAddMatch()">+ Criar jogo</button>
+  </div>
+  <div id="matches-list"></div>
+</div>
+
+<!-- ── DETALHE DO JOGO ── -->
+<div id="sec-match-detail" class="sec">
+
+  <!-- Topo: estado + navegação -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button class="btn btn-secondary btn-sm" onclick="app.closeMatchDetail()">← Jogos</button>
+    <select id="md-status" class="btn btn-ghost btn-sm"
+      style="cursor:pointer;font-family:var(--font-cond);font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase"
+      onchange="app.saveMatchStatus()">
+      <option value="por_começar">Por começar</option>
+      <option value="a_decorrer">A decorrer</option>
+      <option value="finalizado">Finalizado</option>
+    </select>
+  </div>
+
+  <!-- Placard -->
+  <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;margin-bottom:16px;align-items:center">
+    <div class="stat-card" style="text-align:center;padding:12px">
+      <div class="stat-label" id="md-our-short" style="font-size:13px">NÓS</div>
+      <div id="md-score-our" style="font-family:var(--font-cond);font-size:52px;font-weight:700;color:var(--accent);line-height:1">0</div>
+    </div>
+    <div class="stat-card" style="text-align:center;padding:12px;min-width:150px">
+      <div class="stat-label" id="md-period-label">1ª PARTE</div>
+      <div id="md-timer" style="font-family:var(--font-cond);font-size:36px;font-weight:700;font-variant-numeric:tabular-nums">00:00</div>
+      <div style="display:flex;gap:4px;justify-content:center;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" id="md-btn-start" onclick="app.matchTimerStart()">▶</button>
+        <button class="btn btn-ghost btn-sm"   id="md-btn-pause" onclick="app.matchTimerPause()" style="display:none">⏸</button>
+        <button class="btn btn-warn btn-sm"    id="md-btn-half"  onclick="app.matchTimerHalf()"  style="display:none">Intervalo</button>
+        <button class="btn btn-ghost btn-sm"   onclick="app.adjustTimer()">✎</button>
+      </div>
+    </div>
+    <div class="stat-card" style="text-align:center;padding:12px">
+      <div class="stat-label" id="md-opp-short" style="font-size:13px">ADV</div>
+      <div id="md-score-opp" style="font-family:var(--font-cond);font-size:52px;font-weight:700;color:var(--danger);line-height:1">0</div>
+    </div>
+  </div>
+
+  <!-- Convocados -->
+  <div id="md-squad-section" class="form-block" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="form-block-title" style="margin-bottom:0">Convocados</div>
+      <button class="btn btn-primary btn-sm" onclick="app.confirmSquad()">Confirmar convocados</button>
+    </div>
+    <div id="md-squad-list"></div>
+  </div>
+
+  <!-- Tabs -->
+  <div id="md-tabs-section" style="display:none">
+    <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:16px">
+      <button class="md-tab active" data-tab="entrada"   onclick="app.switchTab('entrada')"   style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Entrada</button>
+      <button class="md-tab"        data-tab="jogadores" onclick="app.switchTab('jogadores')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Jogadores</button>
+      <button class="md-tab"        data-tab="jogo"      onclick="app.switchTab('jogo')"      style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Jogo</button>
+      <button class="md-tab"        data-tab="resultado" onclick="app.switchTab('resultado')" style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Resultado</button>
+      <button class="md-tab"        data-tab="mapas"     onclick="app.switchTab('mapas')"     style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Mapas</button>
+      <button class="md-tab"        data-tab="adv"       onclick="app.switchTab('adv')"       style="flex:1;padding:10px 4px;background:none;border:none;border-bottom:2px solid transparent;font-family:var(--font-cond);font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;text-transform:uppercase;letter-spacing:0.4px">Adv.</button>
+    </div>
+
+    <!-- Tab: Entrada -->
+    <div class="md-tab-content" data-tab="entrada">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;height:calc(100vh - 420px);min-height:300px">
+        <div style="overflow-y:auto" id="md-entrada-players"></div>
+        <div style="overflow-y:auto" id="md-entrada-actions"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Jogadores -->
+    <div class="md-tab-content" data-tab="jogadores" style="display:none;overflow-x:auto">
+      <div id="md-tab-jogadores"></div>
+    </div>
+
+    <!-- Tab: Jogo -->
+    <div class="md-tab-content" data-tab="jogo" style="display:none">
+      <div id="md-tab-jogo"></div>
+    </div>
+
+    <!-- Tab: Resultado -->
+    <div class="md-tab-content" data-tab="resultado" style="display:none">
+      <div id="md-tab-resultado"></div>
+    </div>
+
+    <!-- Tab: Mapas (nossa equipa) -->
+    <div class="md-tab-content" data-tab="mapas" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#4ade80"></div><span style="font-size:11px;color:var(--text2)">Golo / Defesa</span></div>
+        <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#ef4444"></div><span style="font-size:11px;color:var(--text2)">Falha / Sofrido</span></div>
+      </div>
+      <!-- Remates nossa equipa -->
+      <div style="font-family:var(--font-cond);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:6px">Nossa equipa — Remates</div>
+      <div style="margin-bottom:8px"><div id="hm-filter" style="display:flex;gap:5px;flex-wrap:wrap"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Campo</div><div id="hm-field-our" style="height:160px;border-radius:4px;overflow:hidden;background:#000"></div></div>
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Baliza</div><div id="hm-goal-our"  style="height:160px;border-radius:4px;overflow:hidden;background:#0a0a18"></div></div>
+      </div>
+      <!-- GR -->
+      <div style="font-family:var(--font-cond);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:6px">GR — Remates sofridos</div>
+      <div style="margin-bottom:8px"><div id="hm-gk-filter" style="display:flex;gap:5px;flex-wrap:wrap"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Campo</div><div id="hm-field-gk" style="height:160px;border-radius:4px;overflow:hidden;background:#000"></div></div>
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Baliza</div><div id="hm-goal-gk"  style="height:160px;border-radius:4px;overflow:hidden;background:#0a0a18"></div></div>
+      </div>
+    </div>
+
+    <!-- Tab: Adv -->
+    <div class="md-tab-content" data-tab="adv" style="display:none">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#4ade80"></div><span style="font-size:11px;color:var(--text2)">Defesa</span></div>
+        <div style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#ef4444"></div><span style="font-size:11px;color:var(--text2)">Golo sofrido</span></div>
+      </div>
+      <!-- GR nosso -->
+      <div style="font-family:var(--font-cond);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:6px">GR — Remates sofridos</div>
+      <div style="margin-bottom:8px"><div id="adv-gk-filter" style="display:flex;gap:5px;flex-wrap:wrap"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Campo</div><div id="adv-field-gk" style="height:160px;border-radius:4px;overflow:hidden;background:#000"></div></div>
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Baliza</div><div id="adv-goal-gk"  style="height:160px;border-radius:4px;overflow:hidden;background:#0a0a18"></div></div>
+      </div>
+      <!-- Adversário por jogador -->
+      <div style="font-family:var(--font-cond);font-size:13px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:6px">Adversário — Por jogador</div>
+      <div style="margin-bottom:8px"><div id="adv-player-filter" style="display:flex;gap:5px;flex-wrap:wrap"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Campo</div><div id="adv-field-adv" style="height:160px;border-radius:4px;overflow:hidden;background:#000"></div></div>
+        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Baliza</div><div id="adv-goal-adv"  style="height:160px;border-radius:4px;overflow:hidden;background:#0a0a18"></div></div>
+      </div>
+    </div>
+
+  </div><!-- /md-tabs-section -->
+</div><!-- /sec-match-detail -->

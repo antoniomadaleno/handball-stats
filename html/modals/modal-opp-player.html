@@ -1,0 +1,30 @@
+<!-- Modal: Jogador adversário -->
+<div class="modal-backdrop" id="modal-opp-player">
+  <div class="modal">
+    <div class="modal-title" id="modal-opp-player-title">Adicionar jogador</div>
+    <input type="hidden" id="mop-id" />
+    <div class="grid g3" style="margin-bottom:0">
+      <div class="field full"><label>Nome</label><input type="text" id="mop-name" placeholder="ex: Carlos Silva" /></div>
+      <div class="field"><label>Data de nascimento</label><input type="date" id="mop-dob" /></div>
+      <div class="field"><label>Posição</label>
+        <select id="mop-position">
+          <option value="">Selecionar...</option>
+          <option value="GR">Guarda-redes</option>
+          <option value="EE">Extremo Esquerdo</option>
+          <option value="LE">Lateral Esquerdo</option>
+          <option value="CE">Central</option>
+          <option value="LD">Lateral Direito</option>
+          <option value="ED">Extremo Direito</option>
+          <option value="PI">Pivot</option>
+        </select>
+      </div>
+      <div class="field"><label>Nº Camisola</label><input type="number" id="mop-shirt"  placeholder="7"   min="1" max="99" /></div>
+      <div class="field"><label>Peso (kg)</label>  <input type="number" id="mop-weight" placeholder="82" /></div>
+      <div class="field"><label>Altura (cm)</label><input type="number" id="mop-height" placeholder="185" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-opp-player')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.saveOppPlayer()">Guardar</button>
+    </div>
+  </div>
+</div>

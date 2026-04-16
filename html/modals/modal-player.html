@@ -1,0 +1,30 @@
+<!-- Modal: Jogador próprio -->
+<div class="modal-backdrop" id="modal-player">
+  <div class="modal">
+    <div class="modal-title" id="modal-player-title">Adicionar jogador</div>
+    <input type="hidden" id="mp-id" />
+    <div class="grid g3" style="margin-bottom:0">
+      <div class="field full"><label>Nome</label><input type="text" id="mp-name" placeholder="ex: João Silva" /></div>
+      <div class="field"><label>Data de nascimento</label><input type="date" id="mp-dob" /></div>
+      <div class="field"><label>Posição</label>
+        <select id="mp-position">
+          <option value="">Selecionar...</option>
+          <option value="GR">Guarda-redes</option>
+          <option value="EE">Extremo Esquerdo</option>
+          <option value="LE">Lateral Esquerdo</option>
+          <option value="CE">Central</option>
+          <option value="LD">Lateral Direito</option>
+          <option value="ED">Extremo Direito</option>
+          <option value="PI">Pivot</option>
+        </select>
+      </div>
+      <div class="field"><label>Nº Camisola</label><input type="number" id="mp-shirt"  placeholder="7"   min="1" max="99" /></div>
+      <div class="field"><label>Peso (kg)</label>  <input type="number" id="mp-weight" placeholder="82" /></div>
+      <div class="field"><label>Altura (cm)</label><input type="number" id="mp-height" placeholder="185" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-player')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.savePlayer()">Guardar</button>
+    </div>
+  </div>
+</div>

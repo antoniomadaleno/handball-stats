@@ -1,0 +1,15 @@
+<div id="page-home" class="page active" style="padding:40px 48px;max-width:720px">
+  <div style="font-family:var(--font-cond);font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Épocas</div>
+  <div style="font-size:13px;color:var(--text2);margin-bottom:28px">Seleciona uma época para a gerir ou cria uma nova.</div>
+  <div id="seasons-list" style="margin-bottom:24px"></div>
+  <div class="new-season-form">
+    <div class="nst">Nova época</div>
+    <div class="inline-form">
+      <div class="field">
+        <label>Nome</label>
+        <input type="text" id="season-name" placeholder="ex: 2025/26" onkeydown="if(event.key==='Enter')app.createSeason()" />
+      </div>
+      <button class="btn btn-primary" onclick="app.createSeason()">Criar</button>
+    </div>
+  </div>
+</div>

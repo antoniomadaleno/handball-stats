@@ -1,0 +1,78 @@
+<!-- INFORMAÇÕES -->
+<div id="sec-info" class="sec active">
+  <div id="info-view">
+    <div class="sec-header">
+      <div><div class="sec-title">Informações</div><div class="sec-sub">Dados gerais da época, equipa técnica e dirigentes.</div></div>
+      <button class="btn btn-secondary" onclick="app.setInfoMode('edit')">Editar</button>
+    </div>
+    <div id="info-view-body"></div>
+  </div>
+  <div id="info-edit" style="display:none">
+    <div class="sec-header">
+      <div><div class="sec-title">Editar informações</div><div class="sec-sub">Dados gerais da época, equipa técnica e dirigentes.</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost"   onclick="app.setInfoMode('view')">Cancelar</button>
+        <button class="btn btn-primary" onclick="app.saveInfo()">Guardar</button>
+      </div>
+    </div>
+    <!-- Equipa -->
+    <div class="form-block">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">
+        <div id="own-badge" class="team-badge badge-upload" onclick="document.getElementById('own-badge-input').click()" title="Clica para carregar emblema"></div>
+        <input type="file" id="own-badge-input" accept="image/*" onchange="app.uploadOwnBadge(this)" />
+        <div>
+          <div class="form-block-title" style="margin-bottom:6px">Equipa</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('own-badge-input').click()">Carregar emblema</button>
+            <button class="btn btn-ghost btn-sm"     onclick="app.removeOwnBadge()">Remover</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid g2">
+        <div class="field"><label>Nome da equipa</label><input type="text" id="i-team"  placeholder="ex: GD Póvoa" /></div>
+        <div class="field"><label>Abreviatura</label>  <input type="text" id="i-short" placeholder="ex: GDP" maxlength="5" /></div>
+      </div>
+      <div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <label>Pavilhões</label>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="app.addPavilion()">+ Adicionar pavilhão</button>
+        </div>
+        <div id="pavilions-container"></div>
+      </div>
+    </div>
+    <!-- Campeonatos -->
+    <div class="form-block">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="form-block-title" style="margin-bottom:0">Campeonatos</div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="app.addLeague()">+ Adicionar campeonato</button>
+      </div>
+      <div id="leagues-container"></div>
+    </div>
+    <!-- Taças -->
+    <div class="form-block">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="form-block-title" style="margin-bottom:0">Taças / Outras competições</div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="app.addCup()">+ Adicionar taça</button>
+      </div>
+      <div id="cups-container"></div>
+    </div>
+    <!-- Equipa técnica -->
+    <div class="form-block">
+      <div class="form-block-title">Equipa técnica</div>
+      <div class="grid g2">
+        <div class="field"><label>Treinador principal</label><input type="text" id="i-coach"   placeholder="Nome" /></div>
+        <div class="field"><label>Treinador adjunto</label>  <input type="text" id="i-coach2"  placeholder="Nome" /></div>
+        <div class="field"><label>Treinador de GR</label>    <input type="text" id="i-coachgr" placeholder="Nome" /></div>
+        <div class="field"><label>Fisioterapeuta</label>     <input type="text" id="i-physio"  placeholder="Nome" /></div>
+      </div>
+    </div>
+    <!-- Dirigentes -->
+    <div class="form-block">
+      <div class="form-block-title">Dirigentes</div>
+      <div class="grid g2">
+        <div class="field"><label>Presidente</label><input type="text" id="i-president" placeholder="Nome" /></div>
+        <div class="field"><label>Delegado</label>  <input type="text" id="i-delegate"  placeholder="Nome" /></div>
+      </div>
+    </div>
+  </div>
+</div>

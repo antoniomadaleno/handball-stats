@@ -1,0 +1,15 @@
+<!-- Modal: Adversário -->
+<div class="modal-backdrop" id="modal-opponent">
+  <div class="modal">
+    <div class="modal-title" id="modal-opp-title">Adicionar adversário</div>
+    <input type="hidden" id="mo-id" />
+    <div class="grid g2" style="margin-bottom:0">
+      <div class="field"><label>Nome</label>        <input type="text" id="mo-name"  placeholder="ex: Sporting CP" /></div>
+      <div class="field"><label>Abreviatura</label> <input type="text" id="mo-short" placeholder="ex: SCP" maxlength="5" /></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost"   onclick="app.closeModal('modal-opponent')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.saveOpponent()">Guardar</button>
+    </div>
+  </div>
+</div>

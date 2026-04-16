@@ -1,0 +1,35 @@
+<!-- PLANTEL -->
+<div id="sec-players" class="sec">
+  <div class="sec-header">
+    <div><div class="sec-title">Plantel</div><div class="sec-sub" id="players-count">—</div></div>
+    <button class="btn btn-primary" onclick="app.openAddPlayer()">+ Adicionar jogador</button>
+  </div>
+  <div id="players-list"></div>
+</div>
+
+<!-- JOGADOR PERFIL -->
+<div id="sec-player-profile" class="sec">
+  <div class="sec-header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-ghost btn-sm" onclick="app.showSec('players')">← Plantel</button>
+      <div><div class="sec-title" id="pp-name">—</div><div class="sec-sub" id="pp-sub">—</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="app.openEditCurrentPlayer()">Editar</button>
+      <button class="btn btn-danger"    onclick="app.deleteCurrentPlayer()">Apagar</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">
+    <div class="stat-card"><div class="stat-label">Nº Camisola</div><div class="stat-val" id="pp-shirt">—</div></div>
+    <div class="stat-card"><div class="stat-label">Posição</div>    <div class="stat-val" id="pp-pos">—</div></div>
+    <div class="stat-card"><div class="stat-label">Idade</div>      <div class="stat-val" id="pp-age">—</div></div>
+    <div class="stat-card"><div class="stat-label">Altura / Peso</div><div class="stat-val" id="pp-metrics">—</div></div>
+  </div>
+  <div class="form-block">
+    <div class="form-block-title">Estatísticas da época</div>
+    <div class="empty" style="padding:28px 0">
+      <div class="empty-icon">📊</div>
+      <div class="empty-text">As estatísticas aparecerão aqui quando houver jogos registados.</div>
+    </div>
+  </div>
+</div>

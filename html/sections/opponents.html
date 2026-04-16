@@ -1,0 +1,75 @@
+<!-- ADVERSÁRIOS -->
+<div id="sec-opponents" class="sec">
+  <div class="sec-header">
+    <div><div class="sec-title">Adversários</div><div class="sec-sub" id="opponents-count">—</div></div>
+    <button class="btn btn-primary" onclick="app.openAddOpponent()">+ Adicionar adversário</button>
+  </div>
+  <div id="opponents-list"></div>
+</div>
+
+<!-- ADVERSÁRIO PERFIL -->
+<div id="sec-opponent-profile" class="sec">
+  <div class="sec-header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-ghost btn-sm" onclick="app.showSec('opponents')">← Adversários</button>
+      <div><div class="sec-title" id="op-name">—</div><div class="sec-sub" id="op-sub">—</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="app.openEditCurrentOpponent()">Editar</button>
+      <button class="btn btn-danger"    onclick="app.deleteCurrentOpponent()">Apagar</button>
+    </div>
+  </div>
+  <div class="form-block" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="form-block-title" style="margin-bottom:0">Análise</div>
+      <button class="btn btn-primary btn-sm" onclick="app.saveOpponentAnalysis()">Guardar análise</button>
+    </div>
+    <div class="grid g1" style="gap:14px">
+      <div class="field"><label>Momento ofensivo</label>        <textarea id="op-offensive"  rows="4" placeholder="Sistema ofensivo, jogadores chave, padrões de ataque, zonas de finalização..."></textarea></div>
+      <div class="field"><label>Momento defensivo</label>        <textarea id="op-defensive"  rows="4" placeholder="Sistema defensivo, pressão, zona vs individual, fraquezas..."></textarea></div>
+      <div class="field"><label>Bolas paradas / 7 metros</label> <textarea id="op-setpieces"  rows="3" placeholder="Executor habitual de 7m, esquemas de livres, corner..."></textarea></div>
+      <div class="field"><label>Análise de guarda-redes</label>  <textarea id="op-goalkeeper" rows="4" placeholder="Percentagem de defesa, lado preferencial, comportamento nos 7m, saídas, distribuição..."></textarea></div>
+      <div class="field"><label>Notas gerais</label>             <textarea id="op-notes"      rows="3" placeholder="Observações adicionais, contexto, histórico de confrontos..."></textarea></div>
+    </div>
+  </div>
+  <div class="form-block">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="form-block-title" style="margin-bottom:0">Plantel</div>
+      <button class="btn btn-secondary btn-sm" onclick="app.openAddOppPlayer()">+ Adicionar jogador</button>
+    </div>
+    <div id="opp-players-list"></div>
+  </div>
+</div>
+
+<!-- JOGADOR ADVERSÁRIO PERFIL -->
+<div id="sec-opp-player-profile" class="sec">
+  <div class="sec-header">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-ghost btn-sm" onclick="app.openOpponentProfile(app._S().currentOpponentId)">← Adversário</button>
+      <div><div class="sec-title" id="opp-pp-name">—</div><div class="sec-sub" id="opp-pp-sub">—</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="app.openEditOppPlayer()">Editar</button>
+      <button class="btn btn-danger"    onclick="app.deleteCurrentOppPlayer()">Apagar</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div class="stat-card"><div class="stat-label">Nº Camisola</div>  <div class="stat-val" id="opp-pp-shirt">—</div></div>
+    <div class="stat-card"><div class="stat-label">Posição</div>      <div class="stat-val" id="opp-pp-pos">—</div></div>
+    <div class="stat-card"><div class="stat-label">Idade</div>        <div class="stat-val" id="opp-pp-age">—</div></div>
+    <div class="stat-card"><div class="stat-label">Altura / Peso</div><div class="stat-val" id="opp-pp-metrics">—</div></div>
+  </div>
+  <div class="form-block">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="form-block-title" style="margin-bottom:0">Notas de análise</div>
+      <button class="btn btn-primary btn-sm" onclick="app.saveOppPlayerNotes()">Guardar</button>
+    </div>
+    <div class="grid g2" style="gap:14px">
+      <div class="field"><label>Pontos fortes</label>            <textarea id="opp-pp-strengths"  rows="4" placeholder="Remate, 1x1, velocidade, leitura de jogo..."></textarea></div>
+      <div class="field"><label>Pontos fracos</label>            <textarea id="opp-pp-weaknesses" rows="4" placeholder="Mão fraca, posicionamento defensivo, pressão..."></textarea></div>
+      <div class="field"><label>Comportamento ofensivo</label>   <textarea id="opp-pp-offensive"  rows="3" placeholder="Zonas preferidas, movimentos típicos, tipos de remate..."></textarea></div>
+      <div class="field"><label>Comportamento defensivo</label>  <textarea id="opp-pp-defensive"  rows="3" placeholder="Posicionamento, agressividade, intercepções..."></textarea></div>
+      <div class="field full"><label>Notas gerais</label>        <textarea id="opp-pp-notes"      rows="3" placeholder="Outras observações relevantes..."></textarea></div>
+    </div>
+  </div>
+</div>
