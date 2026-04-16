@@ -80,7 +80,7 @@ function openLocationModal(actionKey, action) {
       document.getElementById('loc-opp-list').innerHTML = sorted.map(p =>
         `<button class="loc-opp-btn" data-pid="${p._id}"
           onclick="app.locSelectOppPlayer('${p._id}')"
-          style="padding:5px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-cond);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
+          style="padding:8px 14px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-cond);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;min-height:38px">
           <span style="color:var(--accent)">${p.shirt || '?'}</span> ${esc(p.name.split(' ')[0])}
         </button>`
       ).join('');
@@ -92,7 +92,7 @@ function openLocationModal(actionKey, action) {
         document.getElementById('loc-opp-list').innerHTML = oppGks.sort((a, b) => (a.shirt || 99) - (b.shirt || 99)).map(p =>
           `<button class="loc-opp-btn" data-pid="${p._id}"
             onclick="app.locSelectOurGk('${p._id}')"
-            style="padding:5px 8px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-cond);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
+            style="padding:8px 14px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-cond);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;min-height:38px">
             <span style="color:var(--accent)">${p.shirt || '?'}</span> ${esc(p.name.split(' ')[0])}
           </button>`
         ).join('');
