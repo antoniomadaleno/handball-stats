@@ -91,6 +91,16 @@ export function renderJogoHeatmaps() {
 export function renderAdvHeatmaps() {
   const allEvents = MS.match.stats.events || [];
 
+  // ── Secção 1: GR adversário — onde nós marcámos/falhámos na baliza deles ──
+  // Filtro pelos GRs do adversário (guardado em ourGkId no evento quando registamos golo nosso)
+  const oppGks = MS.oppPlayers.filter(p => p.position === 'GR');
+  const gkEl = document.getElementById('adv-gk-filter');
+  if (gkEl) gkEl.innerHTML = makeFilterBtns(
+    [{ id: 'all', label: 'Todos GR' }, ...oppGks.map(p => ({ id: p._id, label: `${p.shirt || '?'} ${p.name.split(' ')[0]}` }))],
+    HM.advGkFilter, 'hmSetAdvGkFilter'
+  );
+
+  // ── Secção 2: Adversário por jogador — remates deles filtrados por jogador ──
   const advPlayerIds = [...new Set(allEvents.filter(e => e.oppPlayerId).map(e => e.oppPlayerId))];
   const advPlayers   = MS.oppPlayers.filter(p => advPlayerIds.includes(p._id));
   const advEl = document.getElementById('adv-player-filter');
@@ -99,18 +109,22 @@ export function renderAdvHeatmaps() {
     HM.advFilter, 'hmSetAdvFilter'
   );
 
-  const ourGks = MS.players.filter(p => p.position === 'GR');
-  const gkEl = document.getElementById('adv-gk-filter');
-  if (gkEl) gkEl.innerHTML = makeFilterBtns(
-    [{ id: 'all', label: 'Todos GR' }, ...ourGks.map(p => ({ id: p.id, label: `${p.shirt || '?'} ${p.name.split(' ')[0]}` }))],
-    HM.advGkFilter, 'hmSetAdvGkFilter'
-  );
-
+  // GR adversário: eventos de golos/falhas nossos onde o GR do adversário está identificado
+  const gkFn  = e => HM.advGkFilter === 'all' || e.ourGkId === HM.advGkFilter;
+  // Adversário por jogador: eventos sofreu_/defesa_ filtrados pelo jogador adversário (oppPlayerId)
   const advFn = e => HM.advFilter   === 'all' || e.oppPlayerId === HM.advFilter;
-  const gkFn  = e => HM.advGkFilter === 'all' || String(e.playerId) === String(HM.advGkFilter);
 
-  renderHeatmap('adv-field-gk',  allEvents.filter(e => gkFn(e)  && e.fieldX != null && (e.action.startsWith('sofreu_') || e.action.startsWith('defesa_'))), 'field', 'our');
-  renderHeatmap('adv-goal-gk',   allEvents.filter(e => gkFn(e)  && e.goalX  != null && (e.action.startsWith('sofreu_') || e.action.startsWith('defesa_'))), 'goal',  'our');
-  renderHeatmap('adv-field-adv', allEvents.filter(e => advFn(e) && e.fieldX != null && (e.action.startsWith('sofreu_') || e.action.startsWith('defesa_'))), 'field', 'adv');
-  renderHeatmap('adv-goal-adv',  allEvents.filter(e => advFn(e) && e.goalX  != null && (e.action.startsWith('sofreu_') || e.action.startsWith('defesa_'))), 'goal',  'adv');
+  // Secção GR adv: remates nossos (golos_ e falha_) — onde atacámos a baliza deles
+  const ourShotEvents = allEvents.filter(e =>
+    !e.action.startsWith('sofreu_') && !e.action.startsWith('defesa_')
+  );
+  renderHeatmap('adv-field-gk', ourShotEvents.filter(e => gkFn(e) && e.fieldX != null), 'field', 'our');
+  renderHeatmap('adv-goal-gk',  ourShotEvents.filter(e => gkFn(e) && e.goalX  != null), 'goal',  'our');
+
+  // Secção adversário por jogador: remates deles (sofreu_/defesa_ registados no nosso GR)
+  const oppShotEvents = allEvents.filter(e =>
+    e.action.startsWith('sofreu_') || e.action.startsWith('defesa_')
+  );
+  renderHeatmap('adv-field-adv', oppShotEvents.filter(e => advFn(e) && e.fieldX != null), 'field', 'adv');
+  renderHeatmap('adv-goal-adv',  oppShotEvents.filter(e => advFn(e) && e.goalX  != null), 'goal',  'adv');
 }
