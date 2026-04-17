@@ -2,108 +2,168 @@
 // matches-actions.js — ações e modal de localização
 // ═══════════════════════════════════════════
 
+import { S } from '../state.js';
 import { DB } from '../db.js';
 import { esc, toast } from '../utils.js';
 import { MS } from './matches-state.js';
 import { updateScoreboard } from './matches-timer.js';
 
+// ── Definições de ações ────────────────────
+// Flags:
+//   goal            — conta como golo marcado (+scoreOur)
+//   save            — conta como defesa do GR
+//   conc            — conta como golo sofrido (+scoreOpp)
+//   fieldOnly       — modal só com campo (sem baliza)
+//   noLocation      — sem modal de localização
+//   optional        — pode ser desligada nas definições
+//   selectOpp       — mostra seletor de jogador adversário no modal
+//   selectOppLabel  — label do seletor adversário
+
 export const ACTIONS_FIELD = [
-  { key: 'golo_9m',    label: 'Golo de 9m',           goal: true  },
-  { key: 'golo_7m',    label: 'Golo de 7m',            goal: true  },
-  { key: 'golo_6m',    label: 'Golo de 6m',            goal: true  },
-  { key: 'golo_ponta', label: 'Golo de Ponta',         goal: true  },
-  { key: 'golo_ca',    label: 'Golo de Contra-Ataque', goal: true  },
-  { key: 'golo_pen',   label: 'Golo de Penetração',    goal: true  },
-  { key: 'falha_9m',   label: 'Falha de 9m',           goal: false },
-  { key: 'falha_7m',   label: 'Falha de 7m',           goal: false },
-  { key: 'falha_6m',   label: 'Falha de 6m',           goal: false },
-  { key: 'falha_ponta',label: 'Falha de Ponta',        goal: false },
-  { key: 'falha_ca',   label: 'Falha de Contra-Ataque',goal: false },
-  { key: 'falha_pen',  label: 'Falha de Penetração',   goal: false },
-  { key: 'bola_perdida',  label: 'Bola perdida',       goal: false },
-  { key: 'recuperacao',   label: 'Recuperação bola',   goal: false },
-  { key: 'assistencia',   label: 'Assistência',        goal: false },
+  // ── Golos ──
+  { key: 'golo_9m',        label: 'Golo de 9m',              goal: true },
+  { key: 'golo_7m',        label: 'Golo de 7m',              goal: true },
+  { key: 'golo_6m',        label: 'Golo de 6m',              goal: true },
+  { key: 'golo_ponta',     label: 'Golo de Ponta',           goal: true },
+  { key: 'golo_ca',        label: 'Golo de Contra-Ataque',   goal: true },
+  { key: 'golo_pen',       label: 'Golo de Penetração',      goal: true },
+  // ── Falhas ──
+  { key: 'falha_9m',       label: 'Falha de 9m'    },
+  { key: 'falha_7m',       label: 'Falha de 7m'    },
+  { key: 'falha_6m',       label: 'Falha de 6m'    },
+  { key: 'falha_ponta',    label: 'Falha de Ponta' },
+  { key: 'falha_ca',       label: 'Falha de Contra-Ataque' },
+  { key: 'falha_pen',      label: 'Falha de Penetração'    },
+  // ── Remate bloqueado ──
+  { key: 'remate_bloqueado', label: 'Remate bloqueado', fieldOnly: true, selectOpp: true, selectOppLabel: 'Jogador adversário que bloqueou (opcional)' },
+  // ── Bloco efetuado ──
+  { key: 'bloco_efetuado',   label: 'Bloco efetuado',   fieldOnly: true, selectOpp: true, selectOppLabel: 'Jogador adversário que rematou (opcional)' },
+  // ── Disciplinar ──
+  { key: 'exclusao_2min',    label: 'Exclusão (2 min)',  noLocation: true },
+  { key: 'cartao_amarelo',   label: 'Cartão amarelo',    noLocation: true },
+  { key: 'cartao_vermelho',  label: 'Cartão vermelho',   noLocation: true },
+  // ── Disputas ──
+  { key: '7m_ganho',         label: '7m ganho',          fieldOnly: true },
+  { key: '7m_provocado',     label: '7m provocado',      fieldOnly: true },
+  { key: '2min_ganho',       label: '2 min ganho',       noLocation: true },
+  { key: 'falta_cometida',   label: 'Falta cometida',    fieldOnly: true },
+  { key: 'falta_ganha',      label: 'Falta ganha',       fieldOnly: true },
+  // ── Opcionais ──
+  { key: 'bola_perdida',     label: 'Bola perdida',        noLocation: true, optional: true },
+  { key: 'recuperacao',      label: 'Recuperação de bola', noLocation: true, optional: true },
+  { key: 'assistencia',      label: 'Assistência',         noLocation: true, optional: true },
 ];
 
 export const ACTIONS_GK = [
-  { key: 'defesa_9m',   label: 'Defesa de 9m',            save: true  },
-  { key: 'defesa_7m',   label: 'Defesa de 7m',            save: true  },
-  { key: 'defesa_6m',   label: 'Defesa de 6m',            save: true  },
-  { key: 'defesa_ponta',label: 'Defesa de Ponta',         save: true  },
-  { key: 'defesa_ca',   label: 'Defesa de Contra-Ataque', save: true  },
-  { key: 'defesa_pen',  label: 'Defesa de Penetração',    save: true  },
-  { key: 'sofreu_9m',   label: 'Golo sofrido de 9m',      conc: true  },
-  { key: 'sofreu_7m',   label: 'Golo sofrido de 7m',      conc: true  },
-  { key: 'sofreu_6m',   label: 'Golo sofrido de 6m',      conc: true  },
-  { key: 'sofreu_ponta',label: 'Golo sofrido de Ponta',   conc: true  },
-  { key: 'sofreu_ca',   label: 'Golo sofrido de Contra-Ataque', conc: true },
-  { key: 'sofreu_pen',  label: 'Golo sofrido de Penetração',    conc: true },
-  { key: 'bola_perdida',  label: 'Bola perdida',          conc: false },
-  { key: 'recuperacao',   label: 'Recuperação bola',      conc: false },
+  // ── Defesas ──
+  { key: 'defesa_9m',        label: 'Defesa de 9m',              save: true },
+  { key: 'defesa_7m',        label: 'Defesa de 7m',              save: true },
+  { key: 'defesa_6m',        label: 'Defesa de 6m',              save: true },
+  { key: 'defesa_ponta',     label: 'Defesa de Ponta',           save: true },
+  { key: 'defesa_ca',        label: 'Defesa de Contra-Ataque',   save: true },
+  { key: 'defesa_pen',       label: 'Defesa de Penetração',      save: true },
+  // ── Golos sofridos ──
+  { key: 'sofreu_9m',        label: 'Golo sofrido de 9m',        conc: true },
+  { key: 'sofreu_7m',        label: 'Golo sofrido de 7m',        conc: true },
+  { key: 'sofreu_6m',        label: 'Golo sofrido de 6m',        conc: true },
+  { key: 'sofreu_ponta',     label: 'Golo sofrido de Ponta',     conc: true },
+  { key: 'sofreu_ca',        label: 'Golo sofrido de CA',        conc: true },
+  { key: 'sofreu_pen',       label: 'Golo sofrido de Penetração',conc: true },
+  { key: 'sofreu_sgr',       label: 'Golo sofrido s/ GR',        conc: true, fieldOnly: true, selectOpp: true, selectOppLabel: 'Jogador adversário que marcou (opcional)' },
+  // ── Disciplinar ──
+  { key: 'exclusao_2min',    label: 'Exclusão (2 min)', noLocation: true },
+  { key: 'cartao_amarelo',   label: 'Cartão amarelo',   noLocation: true },
+  { key: 'cartao_vermelho',  label: 'Cartão vermelho',  noLocation: true },
+  // ── Opcionais ──
+  { key: 'bola_perdida',     label: 'Bola perdida',        noLocation: true, optional: true },
+  { key: 'recuperacao',      label: 'Recuperação de bola', noLocation: true, optional: true },
 ];
 
 export function getAllActions() {
   return [...ACTIONS_FIELD, ...ACTIONS_GK];
 }
 
+// Retorna as ações ativas para um jogador, tendo em conta as definições da época
+export function getActiveActions(player) {
+  const settings = (S.season && S.season.settings) || {};
+  const disabled = settings.disabledActions || [];
+  const custom   = settings.customActions   || [];
+  const base     = player.position === 'GR' ? ACTIONS_GK : ACTIONS_FIELD;
+  const active   = base.filter(a => !disabled.includes(a.key));
+  const customActive = custom.filter(a => !disabled.includes(a.key));
+  return [...active, ...customActive];
+}
+
+// ── Registar ação ──────────────────────────
+
 export function registerAction(playerId, actionKey) {
   if (!MS.match) return;
   const p = MS.players.find(x => x.id === playerId);
   if (!p) return;
-  const action = getAllActions().find(a => a.key === actionKey);
-  const needsLocation = action && (action.goal || action.save || action.conc || actionKey.startsWith('falha_'));
-  if (needsLocation) {
-    MS.pendingAction = { playerId, actionKey, oppPlayerId: null, ourGkId: null };
-    openLocationModal(actionKey, action);
+  const action = getAllActions().find(a => a.key === actionKey)
+    || ((S.season?.settings?.customActions) || []).find(a => a.key === actionKey);
+
+  if (!action || action.noLocation) {
+    commitAction(playerId, actionKey, null, null, null, null, null, null);
     return;
   }
-  commitAction(playerId, actionKey, null, null, null, null);
+  MS.pendingAction = { playerId, actionKey, oppPlayerId: null, ourGkId: null };
+  openLocationModal(actionKey, action);
 }
 
+// ── Modal de localização ───────────────────
+
 function openLocationModal(actionKey, action) {
-  const needsOpp   = action && (action.save || action.conc);
-  const needsOurGk = action && action.goal;
+  const fieldOnly  = action && action.fieldOnly;
+  const needsOurGk = action && action.goal;  // golos marcados — GR adversário que sofreu
 
   document.getElementById('loc-field-dot').style.display = 'none';
   document.getElementById('loc-goal-dot').style.display  = 'none';
   document.getElementById('loc-action-label').textContent = action ? action.label : actionKey;
 
+  // Baliza — esconde em fieldOnly
   const goalSection = document.getElementById('loc-goal-section');
-  if (goalSection) goalSection.style.display = '';
+  if (goalSection) goalSection.style.display = fieldOnly ? 'none' : '';
 
+  // Seletor de jogador adversário
   const oppSection = document.getElementById('loc-opp-section');
   if (oppSection) {
-    if (needsOpp && MS.oppPlayers.length) {
+    let label    = null;
+    let players  = [];
+    let callback = 'locSelectOppPlayer';
+
+    if (action.selectOpp && MS.oppPlayers.length) {
+      label   = action.selectOppLabel || 'Jogador adversário (opcional)';
+      players = MS.oppPlayers;
+    } else if (needsOurGk) {
+      const oppGks = MS.oppPlayers.filter(p => p.position === 'GR');
+      if (oppGks.length) {
+        label    = 'GR adversário que sofreu (opcional)';
+        players  = oppGks;
+        callback = 'locSelectOurGk';
+      }
+    }
+
+    if (label && players.length) {
       oppSection.style.display = '';
-      document.getElementById('loc-opp-label').textContent = 'Quem rematou? (opcional)';
-      const sorted = MS.oppPlayers.slice().sort((a, b) => (a.shirt || 99) - (b.shirt || 99));
+      document.getElementById('loc-opp-label').textContent = label;
+      const sorted = players.slice().sort((a, b) => (a.shirt || 99) - (b.shirt || 99));
       document.getElementById('loc-opp-list').innerHTML = sorted.map(p =>
         `<button class="loc-opp-btn" data-pid="${p._id}"
-          onclick="app.locSelectOppPlayer('${p._id}')"
+          onclick="app.${callback}('${p._id}')"
           style="padding:8px 14px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-cond);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;min-height:38px">
           <span style="color:var(--accent)">${p.shirt || '?'}</span> ${esc(p.name.split(' ')[0])}
         </button>`
       ).join('');
-    } else if (needsOurGk) {
-      const oppGks = MS.oppPlayers.filter(p => p.position === 'GR');
-      if (oppGks.length) {
-        oppSection.style.display = '';
-        document.getElementById('loc-opp-label').textContent = 'GR adversário que sofreu (opcional)';
-        document.getElementById('loc-opp-list').innerHTML = oppGks.sort((a, b) => (a.shirt || 99) - (b.shirt || 99)).map(p =>
-          `<button class="loc-opp-btn" data-pid="${p._id}"
-            onclick="app.locSelectOurGk('${p._id}')"
-            style="padding:8px 14px;border-radius:6px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--font-cond);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;min-height:38px">
-            <span style="color:var(--accent)">${p.shirt || '?'}</span> ${esc(p.name.split(' ')[0])}
-          </button>`
-        ).join('');
-      } else { oppSection.style.display = 'none'; }
     } else {
       oppSection.style.display = 'none';
     }
   }
 
-  MS.pendingAction.fieldX    = null; MS.pendingAction.fieldY    = null;
-  MS.pendingAction.goalX     = null; MS.pendingAction.goalY     = null;
+  MS.pendingAction.fieldX      = null;
+  MS.pendingAction.fieldY      = null;
+  MS.pendingAction.goalX       = null;
+  MS.pendingAction.goalY       = null;
   MS.pendingAction.oppPlayerId = null;
   document.getElementById('modal-location').classList.add('open');
 }
@@ -165,6 +225,8 @@ export function locSelectOurGk(id) {
   });
 }
 
+// ── Commit ─────────────────────────────────
+
 export function commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY, oppPlayerId, ourGkId) {
   if (!MS.match) return;
   const p = MS.players.find(x => x.id === playerId);
@@ -177,29 +239,36 @@ export function commitAction(playerId, actionKey, fieldX, fieldY, goalX, goalY, 
   if (!ps.actions) ps.actions = {};
   ps.actions[actionKey] = (ps.actions[actionKey] || 0) + 1;
 
-  const action = getAllActions().find(a => a.key === actionKey);
+  const action = getAllActions().find(a => a.key === actionKey)
+    || ((S.season?.settings?.customActions) || []).find(a => a.key === actionKey);
+
   if (action) {
     if (action.goal) { ps.goals++; ps.shots++; MS.match.stats.scoreOur++; }
     if (action.save) { ps.saves++; }
     if (action.conc) { ps.conceded++; MS.match.stats.scoreOpp++; }
-    if (actionKey.startsWith('falha_')) ps.shots++;
+    if (actionKey.startsWith('falha_') || actionKey === 'remate_bloqueado') ps.shots++;
   }
 
   MS.match.stats.events.push({
-    t: MS.match.stats.timerSecs,
-    period: MS.match.stats.period,
-    playerId, action: actionKey,
-    playerName: p.name, shirt: p.shirt,
+    t:             MS.match.stats.timerSecs,
+    period:        MS.match.stats.period,
+    playerId,      action: actionKey,
+    playerName:    p.name,
+    shirt:         p.shirt,
     fieldX, fieldY, goalX, goalY,
-    oppPlayerId: oppPlayerId || null,
-    oppPlayerName: oppPlayerId ? (MS.oppPlayers.find(p => p._id === oppPlayerId) || {}).name || null : null,
+    oppPlayerId:   oppPlayerId || null,
+    oppPlayerName: oppPlayerId
+      ? (MS.oppPlayers.find(op => op._id === oppPlayerId) || {}).name || null
+      : null,
     ourGkId: ourGkId || null,
   });
 
   DB.matches.put(MS.match).then(() => {
     updateScoreboard();
-    // Re-render entrada via tab switch
     if (window.app) window.app.switchTab('entrada');
-    toast(action ? action.label : actionKey, action && (action.goal || action.save) ? 'success' : '');
+    toast(
+      action ? action.label : actionKey,
+      action && (action.goal || action.save) ? 'success' : ''
+    );
   });
 }

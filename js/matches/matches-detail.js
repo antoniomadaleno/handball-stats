@@ -9,6 +9,16 @@ import { MS } from './matches-state.js';
 import { timerStop, updateTimerDisplay, updateTimerButtons } from './matches-timer.js';
 import { switchTab } from './matches-tabs.js';
 
+const POS_ORDER = [
+  { key: 'GR', label: 'Guarda-redes' },
+  { key: 'EE', label: 'Extremo Esquerdo' },
+  { key: 'ED', label: 'Extremo Direito' },
+  { key: 'LE', label: 'Lateral Esquerdo' },
+  { key: 'LD', label: 'Lateral Direito' },
+  { key: 'CE', label: 'Central' },
+  { key: 'PI', label: 'Pivot' },
+];
+
 export function openMatchDetail(id) {
   Promise.all([
     DB.matches.bySeason(S.season.id),
@@ -26,7 +36,7 @@ export function openMatchDetail(id) {
     if (!m.stats) m.stats = {
       scoreOur: 0, scoreOpp: 0,
       period: 1, timerSecs: 0,
-      squad: null, players: {}, events: [],
+      squad: null, oppSquad: null, players: {}, events: [],
     };
     if (!m.stats.events)  m.stats.events  = [];
     if (!m.stats.players) m.stats.players = {};
@@ -36,12 +46,19 @@ export function openMatchDetail(id) {
     document.getElementById('md-score-our').textContent = m.stats.scoreOur;
     document.getElementById('md-score-opp').textContent = m.stats.scoreOpp;
     document.getElementById('md-status').value          = m.status || 'por_começar';
-    updateTimerDisplay();
-    updateTimerButtons();
 
     const hasSquad = m.stats.squad && m.stats.squad.length > 0;
+
+    document.getElementById('md-scoreboard').style.display = hasSquad ? 'grid' : 'none';
+
     if (hasSquad) {
+      updateTimerDisplay();
+      updateTimerButtons();
       MS.players = players.filter(p => m.stats.squad.includes(p.id));
+      // Aplicar oppSquad guardado se existir
+      if (m.stats.oppSquad && m.stats.oppSquad.length) {
+        MS.oppPlayers = MS.oppPlayers.filter(p => m.stats.oppSquad.includes(p._id));
+      }
       document.getElementById('md-squad-section').style.display = 'none';
       document.getElementById('md-tabs-section').style.display  = '';
       switchTab('entrada');
@@ -50,6 +67,7 @@ export function openMatchDetail(id) {
       document.getElementById('md-squad-section').style.display = '';
       document.getElementById('md-tabs-section').style.display  = 'none';
       renderSquadPicker(players);
+      renderOppSquadPicker(MS.oppPlayers, m.stats.oppSquad || []);
     }
 
     document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
@@ -61,9 +79,9 @@ export function openMatchDetail(id) {
 
 export function closeMatchDetail() {
   timerStop();
-  MS.match           = null;
-  MS.players         = [];
-  MS.oppPlayers      = [];
+  MS.match            = null;
+  MS.players          = [];
+  MS.oppPlayers       = [];
   MS.selectedPlayerId = null;
   if (window.app) window.app.showSec('matches');
 }
@@ -74,34 +92,84 @@ export function saveMatchStatus() {
   DB.matches.put(MS.match);
 }
 
-// ── Convocados ─────────────────────────────
+// ── Convocados próprios ────────────────────
 
 function renderSquadPicker(players) {
   const el = document.getElementById('md-squad-list');
   if (!players.length) { el.innerHTML = emptyState('👤', 'Sem jogadores no plantel.'); return; }
-  players.sort((a, b) => (a.shirt || 99) - (b.shirt || 99));
-  el.innerHTML = players.map(p => `
-    <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:4px;background:var(--surface2);border:1px solid var(--border)">
-      <input type="checkbox" data-pid="${p.id}" style="width:16px;height:16px;accent-color:var(--accent)" />
-      <span class="player-shirt" style="width:30px;height:30px;font-size:13px">${p.shirt || '—'}</span>
-      <span style="font-family:var(--font-cond);font-size:14px;font-weight:600;flex:1">${esc(p.name)}</span>
-      <span class="pos pos-${p.position}">${p.position}</span>
-    </label>`).join('');
+
+  let html = '';
+  POS_ORDER.forEach(grp => {
+    const group = players.filter(p => p.position === grp.key).sort((a, b) => (a.shirt || 99) - (b.shirt || 99));
+    if (!group.length) return;
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${grp.label}</div>`;
+    group.forEach(p => {
+      html += `<label style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:6px;cursor:pointer;margin-bottom:4px;background:var(--surface2);border:1px solid var(--border);transition:border-color 0.12s">
+        <input type="checkbox" data-pid="${p.id}" style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" />
+        <span style="width:30px;height:30px;border-radius:5px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-family:var(--font-cond);font-size:14px;font-weight:700;color:var(--accent);flex-shrink:0">${p.shirt || '—'}</span>
+        <span style="font-family:var(--font-cond);font-size:14px;font-weight:600">${esc(p.name)}</span>
+      </label>`;
+    });
+    html += `</div>`;
+  });
+  el.innerHTML = html;
 }
 
 export function confirmSquad() {
   const checked = [...document.querySelectorAll('#md-squad-list input[type=checkbox]:checked')];
   if (!checked.length) return toast('Seleciona pelo menos um jogador', 'error');
   MS.match.stats.squad = checked.map(c => parseInt(c.dataset.pid));
+
+  // Guardar oppSquad — se nenhum selecionado, fica null (plantel todo)
+  const oppChecked = [...document.querySelectorAll('#md-opp-squad-list input[type=checkbox]:checked')];
+  MS.match.stats.oppSquad = oppChecked.length ? oppChecked.map(c => c.dataset.pid) : null;
+  if (MS.match.stats.oppSquad) {
+    MS.oppPlayers = MS.oppPlayers.filter(p => MS.match.stats.oppSquad.includes(p._id));
+  }
+
   DB.players.bySeason(S.season.id).then(players => {
     MS.players = players.filter(p => MS.match.stats.squad.includes(p.id));
     DB.matches.put(MS.match).then(() => {
+      document.getElementById('md-scoreboard').style.display = 'grid';
+      updateTimerDisplay();
+      updateTimerButtons();
       document.getElementById('md-squad-section').style.display = 'none';
       document.getElementById('md-tabs-section').style.display  = '';
       switchTab('entrada');
       toast('Convocados confirmados', 'success');
     });
   });
+}
+
+// ── Convocados adversário ──────────────────
+
+function renderOppSquadPicker(oppPlayers, selectedIds) {
+  const el = document.getElementById('md-opp-squad-list');
+  if (!el) return;
+
+  if (!oppPlayers.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:8px 0">Sem jogadores registados para este adversário.</div>`;
+    return;
+  }
+
+  let html = '';
+  POS_ORDER.forEach(grp => {
+    const group = oppPlayers.filter(p => p.position === grp.key).sort((a, b) => (a.shirt || 99) - (b.shirt || 99));
+    if (!group.length) return;
+    html += `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${grp.label}</div>`;
+    group.forEach(p => {
+      const checked = selectedIds.includes(p._id) ? 'checked' : '';
+      html += `<label style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:6px;cursor:pointer;margin-bottom:4px;background:var(--surface2);border:1px solid var(--border);transition:border-color 0.12s">
+        <input type="checkbox" data-pid="${p._id}" ${checked} style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0" />
+        <span style="width:30px;height:30px;border-radius:5px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-family:var(--font-cond);font-size:14px;font-weight:700;color:var(--accent);flex-shrink:0">${p.shirt || '—'}</span>
+        <span style="font-family:var(--font-cond);font-size:14px;font-weight:600">${esc(p.name)}</span>
+      </label>`;
+    });
+    html += `</div>`;
+  });
+  el.innerHTML = html;
 }
 
 export function openMatchEvents(id) { openMatchDetail(id); }

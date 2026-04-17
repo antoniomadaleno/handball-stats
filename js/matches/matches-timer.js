@@ -2,6 +2,7 @@
 // matches-timer.js — timer, placar, período
 // ═══════════════════════════════════════════
 
+import { S } from '../state.js';
 import { DB } from '../db.js';
 import { toast } from '../utils.js';
 import { MS } from './matches-state.js';
@@ -19,6 +20,9 @@ export function updateTimerDisplay() {
     `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   document.getElementById('md-period-label').textContent =
     MS.match.stats.period === 1 ? '1ª PARTE' : '2ª PARTE';
+  const half = MS.match.halfDuration || 30;
+  const durEl = document.getElementById('md-half-duration');
+  if (durEl) durEl.textContent = `${half} MIN / PARTE`;
 }
 
 export function updateTimerButtons() {
@@ -38,8 +42,9 @@ export function matchTimerStart() {
   updateTimerButtons();
   MS.match.status = 'a_decorrer';
   document.getElementById('md-status').value = 'a_decorrer';
+  const halfSecs = (MS.match.halfDuration || 30) * 60;
   MS.timerInterval = setInterval(() => {
-    if (MS.match.stats.timerSecs < 30 * 60) {
+    if (MS.match.stats.timerSecs < halfSecs) {
       MS.match.stats.timerSecs++;
       updateTimerDisplay();
       if (MS.match.stats.timerSecs % 30 === 0) DB.matches.put(MS.match);

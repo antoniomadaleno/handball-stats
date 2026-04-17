@@ -12,6 +12,7 @@ import { renderPlayers, openPlayerProfile, openEditCurrentPlayer, deleteCurrentP
 import { renderOpponents, openAddOpponent, openEditOpponent, saveOpponent, openOpponentProfile, saveOpponentAnalysis, openEditCurrentOpponent, deleteCurrentOpponent, openAddOppPlayer, openEditOppPlayer, saveOppPlayer, openOppPlayerProfile, saveOppPlayerNotes, deleteCurrentOppPlayer } from './opponents.js';
 import {
   renderMatches, openAddMatch, openEditMatch, saveMatch, deleteMatch,
+  onMatchHomeChange, onMatchCompetitionSelect, onMatchVenueSelect,
   openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad, openMatchEvents,
   switchTab, selectPlayer,
   registerAction, locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, locSelectOurGk,
@@ -19,7 +20,7 @@ import {
   renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter,
 } from './matches/matches.js';
 import { closeModal } from './utils.js';
-import { renderSettings } from './settings.js';
+import { renderSettings, settingsSetHalf, settingsToggleAction, settingsAddCustomAction, settingsRemoveCustomAction } from './settings.js';
 
 // ── openSeasonById — lookup seguro sem JSON no onclick ──
 function openSeasonById(id) {
@@ -50,6 +51,7 @@ export const app = {
   openOppPlayerProfile, saveOppPlayerNotes, deleteCurrentOppPlayer,
   // matches
   openAddMatch, openEditMatch, saveMatch, deleteMatch, openMatchEvents,
+  onMatchHomeChange, onMatchCompetitionSelect, onMatchVenueSelect,
   openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad,
   switchTab, selectPlayer, registerAction,
   locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, locSelectOurGk,
@@ -58,7 +60,7 @@ export const app = {
   // utils
   closeModal,
   // settings
-  renderSettings,
+  renderSettings, settingsSetHalf, settingsToggleAction, settingsAddCustomAction, settingsRemoveCustomAction,
   // state access (usado no HTML para o botão ← Adversário)
   _S: () => S,
 };

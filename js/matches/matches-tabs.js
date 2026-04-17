@@ -5,7 +5,7 @@
 import { S } from '../state.js';
 import { esc, emptyState } from '../utils.js';
 import { MS } from './matches-state.js';
-import { ACTIONS_FIELD, ACTIONS_GK, getAllActions, registerAction } from './matches-actions.js';
+import { ACTIONS_FIELD, ACTIONS_GK, getAllActions, registerAction, getActiveActions } from './matches-actions.js';
 import { renderJogoHeatmaps, renderAdvHeatmaps } from './matches-heatmaps.js';
 import { HM } from './matches-state.js';
 
@@ -51,14 +51,18 @@ export function renderEntrada() {
   }).join('');
 
   const sel     = MS.players.find(p => p.id === MS.selectedPlayerId);
-  const isGK    = sel && sel.position === 'GR';
-  const actions = sel ? (isGK ? ACTIONS_GK : ACTIONS_FIELD) : [];
+  const actions = sel ? getActiveActions(sel) : [];
 
   const actionsHtml = !sel
     ? `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:13px;padding:20px;text-align:center">← Seleciona um jogador</div>`
     : actions.map(a => {
         const isGoal = a.goal || a.save;
-        const color  = a.goal ? 'var(--accent)' : a.save ? 'var(--success)' : a.conc ? 'var(--danger)' : 'var(--text2)';
+        const color  = a.goal ? 'var(--accent)'
+          : a.save    ? 'var(--success)'
+          : a.conc    ? 'var(--danger)'
+          : (a.key === 'exclusao_2min' || a.key === 'cartao_amarelo' || a.key === 'cartao_vermelho') ? 'var(--danger)'
+          : (a.key === '7m_ganho' || a.key === '2min_ganho' || a.key === 'falta_ganha' || a.key === '7m_provocado') ? 'var(--success)'
+          : 'var(--text2)';
         return `<button onclick="app.registerAction(${MS.selectedPlayerId},'${a.key}')"
           style="display:block;width:100%;text-align:left;padding:10px 14px;margin-bottom:3px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);font-family:'Barlow',sans-serif;font-size:13px;font-weight:${isGoal ? '600' : '400'};color:${color};cursor:pointer;transition:background 0.1s"
           onmouseover="this.style.background='var(--surface)'"
