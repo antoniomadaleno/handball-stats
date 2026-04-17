@@ -35,6 +35,7 @@
       <div class="nav-item"        onclick="app.showSec('players')"   id="nav-players">   <span class="nav-icon">👤</span> Plantel</div>
       <div class="nav-item"        onclick="app.showSec('opponents')" id="nav-opponents"> <span class="nav-icon">🛡️</span> Adversários</div>
       <div class="nav-item"        onclick="app.showSec('matches')"   id="nav-matches">   <span class="nav-icon">🏐</span> Jogos</div>
+      <div class="nav-item"        onclick="app.showSec('settings')"  id="nav-settings">  <span class="nav-icon">⚙️</span> Definições</div>
     </nav>
     <div class="sidebar-footer">
       <button class="btn btn-warn btn-sm" style="width:100%;justify-content:center" id="sb-end-btn" onclick="app.toggleSeasonEnded()">Terminar época</button>
@@ -87,6 +88,7 @@ const sections = [
   ['html/sections/players.html',   'page-season'],
   ['html/sections/opponents.html', 'page-season'],
   ['html/sections/matches.html',   'page-season'],
+  ['html/sections/settings.html',  'page-season'],
 ];
 
 const modals = [

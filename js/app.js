@@ -19,6 +19,7 @@ import {
   renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter,
 } from './matches/matches.js';
 import { closeModal } from './utils.js';
+import { renderSettings } from './settings.js';
 
 // ── openSeasonById — lookup seguro sem JSON no onclick ──
 function openSeasonById(id) {
@@ -56,6 +57,8 @@ export const app = {
   matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer,
   // utils
   closeModal,
+  // settings
+  renderSettings,
   // state access (usado no HTML para o botão ← Adversário)
   _S: () => S,
 };

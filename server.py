@@ -117,7 +117,10 @@ def inject_reload_script(html):
 _orig_copyfile = http.server.SimpleHTTPRequestHandler.copyfile
 
 def patched_copyfile(self, source, outputfile):
-    if hasattr(self, 'path') and (self.path == '/' or self.path.endswith('.html') or self.path == ''):
+    # Só injeta o hot-reload no index.html — os fragmentos HTML não têm </body>
+    # e o patch causava ERR_CONNECTION_RESET por Content-Length desalinhado
+    is_index = hasattr(self, 'path') and (self.path in ('/', '', '/index.html'))
+    if is_index:
         content = source.read()
         if b'</body>' in content:
             content = inject_reload_script(content)

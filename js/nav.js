@@ -41,6 +41,7 @@ export function showSec(id) {
   if (id === 'players')   { if(window.app) window.app.renderPlayers(); }
   if (id === 'opponents') { if(window.app) window.app.renderOpponents(); }
   if (id === 'matches')   { if(window.app) window.app.renderMatches(); }
+  if (id === 'settings')  { if(window.app) window.app.renderSettings(); }
 }
 
 export function setBreadcrumb(parts) {
