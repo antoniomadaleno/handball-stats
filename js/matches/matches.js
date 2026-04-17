@@ -7,4 +7,4 @@ export { openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad, openM
 export { switchTab, selectPlayer, renderEntrada } from './matches-tabs.js';
 export { registerAction, locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, locSelectOurGk, commitAction } from './matches-actions.js';
 export { matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer } from './matches-timer.js';
-export { renderHeatmap, renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter } from './matches-heatmaps.js';
+export { renderHeatmap, renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter, hmSetViewMode } from './matches-heatmaps.js';

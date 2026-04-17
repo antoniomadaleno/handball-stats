@@ -178,12 +178,38 @@ export function locFieldClick(e) {
 }
 
 export function locGoalClick(e) {
-  const rect = e.currentTarget.getBoundingClientRect();
-  const x = Math.round((e.clientX - rect.left) / rect.width * 100);
-  const y = Math.round((e.clientY - rect.top)  / rect.height * 100);
-  MS.pendingAction.goalX = x; MS.pendingAction.goalY = y;
+  const el   = e.currentTarget;
+  const rect = el.getBoundingClientRect();
+
+  // O SVG usa viewBox="0 0 500 200" com preserveAspectRatio="xMidYMid meet" (default)
+  // Precisamos de saber onde a baliza real está dentro do elemento renderizado
+  const vbW = 500, vbH = 200;
+  const elW = rect.width, elH = rect.height;
+  const scale = Math.min(elW / vbW, elH / vbH);
+  const rendW = vbW * scale;
+  const rendH = vbH * scale;
+  const offX  = (elW - rendW) / 2;  // letterbox horizontal
+  const offY  = (elH - rendH) / 2;  // letterbox vertical
+
+  // Postes e barra no viewBox: poste esq x=85, poste dir x=415, barra y=16, chão y=164
+  const gx1 = offX + 85  * scale;
+  const gx2 = offX + 415 * scale;
+  const gy1 = offY + 16  * scale;
+  const gy2 = offY + 164 * scale;
+
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  const x = Math.round(Math.max(0, Math.min(100, (clickX - gx1) / (gx2 - gx1) * 100)));
+  const y = Math.round(Math.max(0, Math.min(100, (clickY - gy1) / (gy2 - gy1) * 100)));
+
+  MS.pendingAction.goalX = x;
+  MS.pendingAction.goalY = y;
+
   const dot = document.getElementById('loc-goal-dot');
-  dot.style.display = ''; dot.style.left = x + '%'; dot.style.top = y + '%';
+  dot.style.display = '';
+  dot.style.left = ((clickX / elW) * 100) + '%';
+  dot.style.top  = ((clickY / elH) * 100) + '%';
 }
 
 export function locNextStep() { locConfirm(); }

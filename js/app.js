@@ -17,7 +17,7 @@ import {
   switchTab, selectPlayer,
   registerAction, locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, locSelectOurGk,
   matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer,
-  renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter,
+  renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter, hmSetViewMode,
 } from './matches/matches.js';
 import { closeModal } from './utils.js';
 import { renderSettings, settingsSetHalf, settingsToggleAction, settingsAddCustomAction, settingsRemoveCustomAction } from './settings.js';
@@ -55,7 +55,7 @@ export const app = {
   openMatchDetail, closeMatchDetail, saveMatchStatus, confirmSquad,
   switchTab, selectPlayer, registerAction,
   locFieldClick, locGoalClick, locNextStep, locConfirm, locSkip, locSelectOppPlayer, locSelectOurGk,
-  renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter,
+  renderJogoHeatmaps, renderAdvHeatmaps, hmSetFilter, hmSetGkFilter, hmSetAdvFilter, hmSetAdvGkFilter, hmSetViewMode,
   matchTimerStart, matchTimerPause, matchTimerHalf, adjustTimer, confirmAdjustTimer,
   // utils
   closeModal,
