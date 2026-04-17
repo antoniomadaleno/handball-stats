@@ -19,5 +19,5 @@ export const HM = {
   gkFilter:  'all',
   advFilter: 'all',
   advGkFilter: 'all',
-  viewMode:  'dots', // 'dots' | 'zones'
+  viewMode:  'heatmap', // 'dots' | 'heatmap' | 'zones'
 };

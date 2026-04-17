@@ -124,17 +124,125 @@ function isGoalAction(action) {
   return action.startsWith('golo_') || action.startsWith('defesa_');
 }
 
+// ── Modo heatmap (gradiente gaussiano) ────────
+// Colormap: preto → azul → verde → amarelo → vermelho
+function getHeatColor(t) {
+  // t: 0-1
+  if (t < 0.25) {
+    const s = t / 0.25;
+    return [0, Math.round(s * 100), Math.round(50 + s * 150)];
+  } else if (t < 0.5) {
+    const s = (t - 0.25) / 0.25;
+    return [0, Math.round(100 + s * 128), Math.round(200 - s * 200)];
+  } else if (t < 0.75) {
+    const s = (t - 0.5) / 0.25;
+    return [Math.round(s * 255), 228, 0];
+  } else {
+    const s = (t - 0.75) / 0.25;
+    return [255, Math.round(228 - s * 228), 0];
+  }
+}
+
+function renderHeatmapCanvas(el, events, type) {
+  const filtered = events.filter(e => type === 'field' ? (e.fieldX != null) : (e.goalX != null));
+
+  const W = 300, H = type === 'field' ? 240 : 120;
+  const sigma = type === 'field' ? 18 : 14;
+
+  // Para baliza: mapear coords normalizadas (0-100% dentro da baliza) para pixels do canvas
+  // Para campo: coords 0-100% do elemento
+
+  // Densidade acumulada
+  const density = new Float32Array(W * H);
+
+  filtered.forEach(e => {
+    let px, py;
+    if (type === 'goal') {
+      px = (e.goalX / 100) * W;
+      py = (e.goalY / 100) * H;
+    } else {
+      px = (e.fieldX / 100) * W;
+      py = (e.fieldY / 100) * H;
+    }
+    // Gaussian splat
+    const r = Math.ceil(sigma * 3);
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        const ix = Math.round(px + dx);
+        const iy = Math.round(py + dy);
+        if (ix < 0 || ix >= W || iy < 0 || iy >= H) continue;
+        const g = Math.exp(-(dx*dx + dy*dy) / (2 * sigma * sigma));
+        density[iy * W + ix] += g;
+      }
+    }
+  });
+
+  const maxD = Math.max(...density, 1e-6);
+
+  // Render canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.createImageData(W, H);
+
+  for (let i = 0; i < W * H; i++) {
+    const t = density[i] / maxD;
+    if (t < 0.02) {
+      imgData.data[i*4+3] = 0;
+      continue;
+    }
+    const [r, g, b] = getHeatColor(t);
+    imgData.data[i*4]   = r;
+    imgData.data[i*4+1] = g;
+    imgData.data[i*4+2] = b;
+    imgData.data[i*4+3] = Math.round(Math.min(1, t * 1.5) * 200);
+  }
+  ctx.putImageData(imgData, 0, 0);
+  const dataUrl = canvas.toDataURL();
+
+  if (type === 'goal') {
+    // Overlay canvas sobre SVG da baliza — dentro da área da baliza
+    // Baliza ocupa x:85-415 (66%), y:16-164 (74%) do viewBox 500×200
+    el.innerHTML = `<div style="position:relative;width:100%;height:100%">
+      <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;border-radius:4px">
+        <rect x="0" y="0" width="500" height="200" fill="#0a0a18"/>
+        <rect x="90" y="20" width="320" height="140" fill="#111128"/>
+        <image href="${dataUrl}" x="85" y="16" width="330" height="148" preserveAspectRatio="none" style="mix-blend-mode:screen"/>
+        <line x1="197" y1="20" x2="197" y2="160" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <line x1="303" y1="20" x2="303" y2="160" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <line x1="90"  y1="67" x2="410" y2="67"  stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <line x1="90"  y1="113" x2="410" y2="113" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <rect x="85" y="16" width="8"   height="148" fill="#4a9a6a" rx="2"/>
+        <rect x="407" y="16" width="8"   height="148" fill="#4a9a6a" rx="2"/>
+        <rect x="85" y="16" width="330" height="8"   fill="#4a9a6a" rx="2"/>
+      </svg>
+    </div>`;
+  } else {
+    el.innerHTML = `<div style="position:relative;width:100%;height:100%">
+      ${FIELD_IMG}
+      <canvas width="${W}" height="${H}"
+        style="position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:screen;border-radius:4px;pointer-events:none"></canvas>
+    </div>`;
+    // Draw after DOM insert
+    setTimeout(() => {
+      const c = el.querySelector('canvas');
+      if (!c) return;
+      const ctx2 = c.getContext('2d');
+      ctx2.clearRect(0, 0, W, H);
+      ctx2.putImageData(imgData, 0, 0);
+    }, 0);
+  }
+}
+
+// ── Modo zonas (contagem por zona) ─────────
 function renderZones(el, events, type) {
   const filtered = events.filter(e => type === 'field' ? (e.fieldX != null) : (e.goalX != null));
-  const bg       = type === 'field' ? FIELD_IMG : GOAL_SVG;
 
   const cols = 3;
   const rows = type === 'field' ? 4 : 3;
   const total_zones = cols * rows;
 
-  // Contagem por zona
-  const counts  = Array(total_zones).fill(0);
-  const goals   = Array(total_zones).fill(0);
+  const counts = Array(total_zones).fill(0);
   filtered.forEach(e => {
     const x = type === 'field' ? e.fieldX : e.goalX;
     const y = type === 'field' ? e.fieldY : e.goalY;
@@ -142,31 +250,24 @@ function renderZones(el, events, type) {
       ? assignZoneField(x, y, cols, rows)
       : assignZoneGoal(x, y, cols, rows);
     counts[z]++;
-    if (isGoalAction(e.action)) goals[z]++;
   });
 
-  const total   = filtered.length || 1;
+  const total    = filtered.length || 1;
   const maxCount = Math.max(...counts, 1);
 
-  // Para baliza: foco só na área interior (x: 18%-82%, y: 8%-80% do viewBox 500x200)
-  // Mapeamos as zonas para as coordenadas do SVG da baliza
   const goalZoneCoords = [
-    // row 0 (topo): 3 zonas
-    { x1: 90, y1: 20, x2: 197, y2: 67  }, // col0
-    { x1: 197,y1: 20, x2: 303, y2: 67  }, // col1
-    { x1: 303,y1: 20, x2: 410, y2: 67  }, // col2
-    // row 1 (meio)
+    { x1: 90, y1: 20, x2: 197, y2: 67  },
+    { x1: 197,y1: 20, x2: 303, y2: 67  },
+    { x1: 303,y1: 20, x2: 410, y2: 67  },
     { x1: 90, y1: 67, x2: 197, y2: 113 },
     { x1: 197,y1: 67, x2: 303, y2: 113 },
     { x1: 303,y1: 67, x2: 410, y2: 113 },
-    // row 2 (baixo)
     { x1: 90, y1:113, x2: 197, y2: 160 },
     { x1: 197,y1:113, x2: 303, y2: 160 },
     { x1: 303,y1:113, x2: 410, y2: 160 },
   ];
 
   if (type === 'goal') {
-    // Render SVG com zonas sobrepostas
     const zoneSvgs = counts.map((count, i) => {
       if (count === 0) return '';
       const pct      = Math.round(count / total * 100);
@@ -175,14 +276,12 @@ function renderZones(el, events, type) {
       const c        = goalZoneCoords[i];
       const cx       = (c.x1 + c.x2) / 2;
       const cy       = (c.y1 + c.y2) / 2;
-      const color    = `rgba(232,200,74,${alpha})`;
-      return `<rect x="${c.x1}" y="${c.y1}" width="${c.x2-c.x1}" height="${c.y2-c.y1}" fill="${color}" rx="2"/>
+      return `<rect x="${c.x1}" y="${c.y1}" width="${c.x2-c.x1}" height="${c.y2-c.y1}" fill="rgba(232,200,74,${alpha})" rx="2"/>
         <text x="${cx}" y="${cy - 6}" text-anchor="middle" dominant-baseline="central"
           style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;fill:white">${count}</text>
         <text x="${cx}" y="${cy + 10}" text-anchor="middle" dominant-baseline="central"
           style="font-family:'Barlow Condensed',sans-serif;font-size:10px;fill:rgba(255,255,255,0.7)">${pct}%</text>`;
     }).join('');
-
     el.innerHTML = `<div style="position:relative;width:100%;height:100%">
       <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;border-radius:4px">
         <rect x="0" y="0" width="500" height="200" fill="#0a0a18"/>
@@ -200,7 +299,6 @@ function renderZones(el, events, type) {
     return;
   }
 
-  // Campo — overlay com divs sobre a imagem
   const zoneW = 100 / cols;
   const zoneH = 100 / rows;
   const zoneDivs = counts.map((count, i) => {
@@ -209,22 +307,15 @@ function renderZones(el, events, type) {
     const pct = Math.round(count / total * 100);
     const intensity = count / maxCount;
     const alpha = count === 0 ? 0 : 0.12 + intensity * 0.5;
-    const left = col * zoneW;
-    const top  = row * zoneH;
-    return `<div style="position:absolute;left:${left}%;top:${top}%;width:${zoneW}%;height:${zoneH}%;
-      background:rgba(232,200,74,${alpha});
-      border:1px solid rgba(255,255,255,0.06);
+    return `<div style="position:absolute;left:${col*zoneW}%;top:${row*zoneH}%;width:${zoneW}%;height:${zoneH}%;
+      background:rgba(232,200,74,${alpha});border:1px solid rgba(255,255,255,0.06);
       display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box">
-      ${count > 0 ? `
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:white;line-height:1">${count}</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:rgba(255,255,255,0.7);line-height:1.4">${pct}%</span>
-      ` : ''}
+      ${count > 0 ? `<span style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:white;line-height:1">${count}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:rgba(255,255,255,0.7);line-height:1.4">${pct}%</span>` : ''}
     </div>`;
   }).join('');
-
   el.innerHTML = `<div style="position:relative;width:100%;height:100%">
-    ${FIELD_IMG}
-    <div style="position:absolute;inset:0">${zoneDivs}</div>
+    ${FIELD_IMG}<div style="position:absolute;inset:0">${zoneDivs}</div>
   </div>`;
 }
 
@@ -237,8 +328,9 @@ export function renderHeatmap(containerId, events, type, perspective) {
     el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px">Sem dados</div>`;
     return;
   }
-  if (HM.viewMode === 'zones') renderZones(el, events, type);
-  else                          renderDots(el, events, type, perspective);
+  if (HM.viewMode === 'heatmap') renderHeatmapCanvas(el, events, type);
+  else if (HM.viewMode === 'zones') renderZones(el, events, type);
+  else renderDots(el, events, type, perspective);
 }
 
 export function hmSetViewMode(mode) {
@@ -255,15 +347,14 @@ function makeFilterBtns(opts, currentVal, callbackFn) {
 }
 
 function modeToggle() {
+  const btn = (mode, icon, label) => `<button onclick="app.hmSetViewMode('${mode}')"
+    style="padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:${HM.viewMode===mode ? 'var(--accent)' : 'var(--surface2)'};color:${HM.viewMode===mode ? '#0d0f14' : 'var(--text)'};font-family:var(--font-cond);font-size:11px;font-weight:600;cursor:pointer">
+    ${icon} ${label}
+  </button>`;
   return `<div style="display:flex;gap:4px">
-    <button onclick="app.hmSetViewMode('dots')"
-      style="padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:${HM.viewMode==='dots' ? 'var(--accent)' : 'var(--surface2)'};color:${HM.viewMode==='dots' ? '#0d0f14' : 'var(--text)'};font-family:var(--font-cond);font-size:11px;font-weight:600;cursor:pointer">
-      ● Pontos
-    </button>
-    <button onclick="app.hmSetViewMode('zones')"
-      style="padding:4px 10px;border-radius:5px;border:1px solid var(--border2);background:${HM.viewMode==='zones' ? 'var(--accent)' : 'var(--surface2)'};color:${HM.viewMode==='zones' ? '#0d0f14' : 'var(--text)'};font-family:var(--font-cond);font-size:11px;font-weight:600;cursor:pointer">
-      ▦ Zonas
-    </button>
+    ${btn('dots',    '●', 'Pontos')}
+    ${btn('heatmap', '◉', 'Calor')}
+    ${btn('zones',   '▦', 'Zonas')}
   </div>`;
 }
 
