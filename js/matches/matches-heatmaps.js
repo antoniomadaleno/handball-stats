@@ -34,10 +34,12 @@ export function renderHeatmap(containerId, events, type, perspective) {
     const x = type === 'field' ? e.fieldX : e.goalX;
     const y = type === 'field' ? e.fieldY : e.goalY;
     let color;
-    if (e.action.startsWith('golo_'))        color = 'rgba(74,222,128,0.9)';
-    else if (e.action.startsWith('sofreu_')) color = 'rgba(239,68,68,0.9)';
-    else if (e.action.startsWith('defesa_')) color = 'rgba(74,222,128,0.9)';
-    else                                      color = 'rgba(239,68,68,0.9)';
+    if (e.action.startsWith('golo_'))          color = 'rgba(74,222,128,0.9)';
+    else if (e.action === 'remate_bloqueado')  color = 'rgba(232,200,74,0.9)';
+    else if (e.action === 'bloco_efetuado')    color = 'rgba(232,200,74,0.9)';
+    else if (e.action.startsWith('sofreu_'))   color = 'rgba(239,68,68,0.9)';
+    else if (e.action.startsWith('defesa_'))   color = 'rgba(74,222,128,0.9)';
+    else                                        color = 'rgba(239,68,68,0.9)';
     let labelText = '';
     if (perspective === 'adv' && e.oppPlayerId) {
       const oppP = MS.oppPlayers.find(p => p._id === e.oppPlayerId);
@@ -82,8 +84,11 @@ export function renderJogoHeatmaps() {
   const fieldFn = e => HM.filter   === 'all' || String(e.playerId) === String(HM.filter);
   const gkFn    = e => HM.gkFilter === 'all' || String(e.playerId) === String(HM.gkFilter);
 
-  renderHeatmap('hm-field-our', allEvents.filter(e => fieldFn(e) && e.fieldX != null && !e.action.startsWith('sofreu_') && !e.action.startsWith('defesa_')), 'field');
-  renderHeatmap('hm-goal-our',  allEvents.filter(e => fieldFn(e) && e.goalX  != null && !e.action.startsWith('sofreu_') && !e.action.startsWith('defesa_')), 'goal');
+  const isOurShot = e => !e.action.startsWith('sofreu_') && !e.action.startsWith('defesa_')
+    && (e.action.startsWith('golo_') || e.action.startsWith('falha_') || e.action === 'remate_bloqueado');
+
+  renderHeatmap('hm-field-our', allEvents.filter(e => fieldFn(e) && e.fieldX != null && isOurShot(e)), 'field');
+  renderHeatmap('hm-goal-our',  allEvents.filter(e => fieldFn(e) && e.goalX  != null && isOurShot(e)), 'goal');
   renderHeatmap('hm-field-gk',  allEvents.filter(e => gkFn(e)   && e.fieldX != null && (e.action.startsWith('sofreu_') || e.action.startsWith('defesa_'))), 'field');
   renderHeatmap('hm-goal-gk',   allEvents.filter(e => gkFn(e)   && e.goalX  != null && (e.action.startsWith('sofreu_') || e.action.startsWith('defesa_'))), 'goal');
 }
@@ -114,16 +119,16 @@ export function renderAdvHeatmaps() {
   // Adversário por jogador: eventos sofreu_/defesa_ filtrados pelo jogador adversário (oppPlayerId)
   const advFn = e => HM.advFilter   === 'all' || e.oppPlayerId === HM.advFilter;
 
-  // Secção GR adv: remates nossos (golos_ e falha_) — onde atacámos a baliza deles
+  // Secção GR adv: remates nossos (golos_, falha_, remate_bloqueado) — onde atacámos a baliza deles
   const ourShotEvents = allEvents.filter(e =>
-    !e.action.startsWith('sofreu_') && !e.action.startsWith('defesa_')
+    e.action.startsWith('golo_') || e.action.startsWith('falha_') || e.action === 'remate_bloqueado'
   );
   renderHeatmap('adv-field-gk', ourShotEvents.filter(e => gkFn(e) && e.fieldX != null), 'field', 'our');
   renderHeatmap('adv-goal-gk',  ourShotEvents.filter(e => gkFn(e) && e.goalX  != null), 'goal',  'our');
 
-  // Secção adversário por jogador: remates deles (sofreu_/defesa_ registados no nosso GR)
+  // Secção adversário por jogador: remates deles (sofreu_/defesa_ + bloco_efetuado registados pelo nosso jogador)
   const oppShotEvents = allEvents.filter(e =>
-    e.action.startsWith('sofreu_') || e.action.startsWith('defesa_')
+    e.action.startsWith('sofreu_') || e.action.startsWith('defesa_') || e.action === 'bloco_efetuado'
   );
   renderHeatmap('adv-field-adv', oppShotEvents.filter(e => advFn(e) && e.fieldX != null), 'field', 'adv');
   renderHeatmap('adv-goal-adv',  oppShotEvents.filter(e => advFn(e) && e.goalX  != null), 'goal',  'adv');
